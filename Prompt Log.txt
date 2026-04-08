@@ -1,0 +1,870 @@
+﻿Tools I used:
+* Reactive Native 
+* Claude 
+* Figma for high-fidelity prototyping
+
+
+Prompts I asked Claude:
+1. "to build my mobile app, i have made high-fidelity wireframes using figma. now i want to build the frontend of my app using claude code. do i need label the components of each page in the figma as "buttons", "cards" or "fields" for claude code to be able to actually code my app. also how do i share the figma file with claude code for it to build the app"
+2. "does the figma prototype need to fit to an iphone screen"
+3. "we have made all our frames for iphone 13 mini by mistake. we want the app to display correctly on all iphone sizes. what do we do"
+4. "how to do" (referring to Auto Layout)
+5. "do we need to name text"
+6. "is it better to write 'button to sign in' for example i.e. more descriptive"
+7. "does text box description also have to be in pascal case?"
+8. "does the overall layer name which is the entire page screen also have to be in pascal case or only the buttons, fields and cards within the layer"
+9. "do image names and symbols added need to be in pascal case?"
+10. "do pre loaded layer names such as status bar (since we are building an IOS mobile app for Iphone 17 also have to be in pascal case?"
+11. "Name the rectangle as well"
+12. "how can i find hidden images in figma"
+13. "where is add variant"
+14. "how to undo the creation of component"
+15. "is it ok if the navigation bar appears in many pages but is not a component?"
+16. "i am finding it difficult to create multiple variants for each label such as active and inactive so i do not want to make it into a component"
+17. "but then how can i change the image from cancun's image to las vegas' if i do component"
+18. "what exactly is a component"
+19. "zsh: command not found: claude"
+20. "npm error code EACCES npm error syscall mkdir npm error path /usr/local/lib/node_modules/@anthropic-ai npm error errno -13 npm error Error: EACCES: permission denied, mkdir '/usr/local/lib/node_modules/@anthropic-ai'..."
+21. "added 3 packages in 2s. 2 packages are looking for funding. run npm fund for details"
+22. "should I code this app in vs code's Claude Code extension or directly in Claude Code by connecting it my GitHub repo for this app"
+23. "Error loading webview: Error: Could not register service worker: InvalidStateError: Failed to register a ServiceWorker: The document is in an invalid state. Would you like to inspect any of these? in vs code's Claude Code extension"
+24. "where do I upload the figma file"
+25. "what if u want to put the entire figma file on Claude Code so it processes all of it at the same time"
+26. "ok now what can I do"
+27. "would it be easier to connect to Claude Code via mcp"
+28. "what is this called" (referring to anon public key)
+29. "I never did Supabase but it's fine"
+30. "kind of but it didnt get the logo. this is my second frame: [Figma link]"
+31. "sort of. the Supabase credentials aren't configured"
+Prompts I put in Claude Code for the development:
+Prompt 1 — Initial Master Prompt
+Read SPEC-2.md in this project. Implement the full mobile app 
+exactly as specified. Create all necessary files, components, 
+and navigation. Make sure that appropriate data is persistent. 
+Avoid security risks for sensitive data. Include proper error 
+handling. Make sure the app starts without errors and displays 
+the home screen correctly. i will also give you my high-fidelity 
+figma prototype frame-by-frame so build the app frame-by-frame 
+here's the first frame: https://www.figma.com/design/4JaA1ChPKpF3eSGhCL54m0/Wireframes-for-Claude-Code?node-id=3-618&t=gRb33xun15mrcTVm-11
+
+Prompt 2 — Improved Master Prompt
+Read SPEC-2.md in this project and understand the full app 
+specification before doing anything.
+
+
+Tech stack:
+- React Native + Expo
+- Supabase (auth + database + storage)
+- TypeScript
+
+
+General requirements for every screen:
+- Responsive across all iPhone sizes using SafeAreaView
+- Proper error handling on all API calls
+- Sensitive data stored securely using Expo SecureStore
+- No hardcoded credentials or API keys
+- App must start without errors
+Build instructions:
+- Build the app screen by screen
+- I will give you one Figma frame at a time
+- After each screen, confirm what you built and wait for 
+  the next frame
+- Reuse components across screens wherever possible
+- Keep navigation structure consistent with the spec
+
+
+Here is the first Figma frame — LoadingPage:
+https://www.figma.com/design/4JaA1ChPKpF3eSGhCL54m0/Wireframes-for-Claude-Code?node-id=3-618&t=gRb33xun15mrcTVm-11
+
+
+Build only this screen for now. Confirm when done.
+
+Prompt 3 — SignInOrSignUpPage (fix logo + build screen)
+Read SPEC-2.md before doing anything.
+
+
+The LoadingPage is built but the AppLogoIllustration did not 
+render correctly. Before moving to the next screen, fix this first.
+
+
+The AppLogoIllustration is the airplane window with three people 
+inside it — it is the centerpiece of the LoadingPage and should 
+be centered on the screen. It is an illustration/image asset from 
+Figma, not an icon. Make sure it is properly exported from Figma 
+and imported into the component.
+
+
+Once the logo is fixed on LoadingPage, build the next screen — 
+SignInOrSignUpPage:
+https://www.figma.com/design/4JaA1ChPKpF3eSGhCL54m0/Wireframes-for-Claude-Code?node-id=3-5&t=gRb33xun15mrcTVm-11
+
+
+Requirements for this screen:
+- AppLogoTitle "On the GO!" at the top — use the same style 
+  fixed in LoadingPage for consistency
+- EmailInputField with placeholder "email@domain.com"
+- ContinueButton (black, full width)
+- OrDividerLine with OrDividerLabel "or" in the center
+- ContinueWithGoogleButton with GoogleLogo
+- ContinueWithAppleButton with AppleLogo
+- TermsAndPrivacyText at the bottom
+- All three sign in methods should be wired to Supabase Auth
+- Background color #5B9BD5
+
+
+Confirm when done and show me what the screen looks like.
+
+Prompt 4 — Supabase fix + ChooseNewOrSavedTripPage
+Read SPEC-2.md before doing anything.
+
+
+Supabase credentials are now configured in the .env file.
+Complete the following before moving to the next screen:
+
+
+1. Make sure Supabase is properly initialized in the project 
+   using the environment variables in .env
+2. Wire up all three auth methods on SignInOrSignUpPage:
+   - Email/password via Supabase Auth
+   - Google sign in via Supabase OAuth
+   - Apple sign in via Supabase OAuth
+3. Test that the auth flow works without errors
+
+
+Once auth is confirmed working, build the next screen — 
+ChooseNewOrSavedTripPage:
+https://www.figma.com/design/4JaA1ChPKpF3eSGhCL54m0/Wireframes-for-Claude-Code?node-id=3-62&t=gRb33xun15mrcTVm-11
+
+
+Requirements for this screen:
+- AppLogoTitle "On the GO!" consistent with previous screens
+- UserProfileCard showing UserAvatarIcon and UserWelcomeGreeting
+  (UserWelcomeGreeting is dynamic — pulls the signed in user's 
+  name from Supabase)
+- CreateNewTripCard with CreateNewTripIcon and CreateNewTripLabel
+  — navigates to TripNameAndDatesPage on tap
+- SavedTripsCard with SavedTripsIcon and SavedTripsLabel
+  — navigates to YourSavedTripsPage on tap
+- Background color #5B9BD5
+
+
+Confirm when done and show me what the screen looks like.
+
+Prompt 5 — ChooseNewOrSavedTripPage (without Supabase)
+Read SPEC-2.md before doing anything.
+
+
+Build the next screen — ChooseNewOrSavedTripPage:
+https://www.figma.com/design/4JaA1ChPKpF3eSGhCL54m0/Wireframes-for-Claude-Code?node-id=3-62&t=gRb33xun15mrcTVm-11
+
+
+Requirements for this screen:
+- AppLogoTitle "On the GO!" consistent with previous screens
+- UserProfileCard containing:
+  - UserAvatarIcon (blue person illustration)
+  - UserWelcomeGreeting "Welcome, [name]" — hardcode 
+    a placeholder name for now, Supabase will be 
+    wired up later
+- CreateNewTripCard with:
+  - CreateNewTripIcon (blue "+" symbol)
+  - CreateNewTripLabel "Create a new trip"
+  - Tapping navigates to TripNameAndDatesPage
+- SavedTripsCard with:
+  - SavedTripsIcon (floppy disk illustration)
+  - SavedTripsLabel "Your Saved Trips"
+  - Tapping navigates to YourSavedTripsPage
+- Background color #5B9BD5
+- Responsive across all iPhone sizes using SafeAreaView
+
+
+Confirm when done and show me what the screen looks like.
+
+Prompt 6 — TripNameAndDatesStepOnePage
+Read SPEC-2.md before doing anything.
+
+
+Build the next screen — TripNameAndDatesStepOnePage:
+https://www.figma.com/design/4JaA1ChPKpF3eSGhCL54m0/Wireframes-for-Claude-Code?node-id=3-103&t=gRb33xun15mrcTVm-11
+
+
+Requirements for this screen:
+- AppLogoTitle "On the GO!" consistent with previous screens
+- TripCreationStepper at the top with 3 steps:
+  - StepOneCircleActive (yellow highlighted) — calendar icon
+  - StepTwoCircleInactive — group icon
+  - StepThreeCircleInactive — location icon
+  - StepConnectorLine between each circle
+- TripNameLabel "Trip Name *"
+- TripNameInputField with placeholder "e.g. Grad Trip 2026"
+- StartDateLabel "Start Date" with StartDateInputField
+  - StartDateCalendarIcon inside the field
+  - Placeholder "mm/dd/yyyy"
+  - Tapping opens native iOS date picker
+- EndDateLabel "End Date" with EndDateInputField
+  - EndDateCalendarIcon inside the field
+  - Placeholder "mm/dd/yyyy"
+  - Tapping opens native iOS date picker
+- EndDate must be after StartDate — show error if not
+- TripNameInputField is required — show error if empty
+- BackNavigationButton — navigates back to 
+  ChooseNewOrSavedTripPage
+- NextNavigationButton — navigates to 
+  InviteCollaboratorsPage only if all fields are valid
+- Background color #5B9BD5
+- Responsive across all iPhone sizes using SafeAreaView
+
+
+Note: The stepper is a reusable component that will appear 
+on the next two screens as well with different active steps 
+each time. Build it as a reusable TripCreationStepper 
+component from the start.
+
+
+Confirm when done and show me what the screen looks like.
+
+Prompt 7 — YourSavedTripsPage
+Read SPEC-2.md before doing anything.
+
+
+Build the next screen — YourSavedTripsPage:
+https://www.figma.com/design/4JaA1ChPKpF3eSGhCL54m0/Wireframes-for-Claude-Code?node-id=3-762&t=gRb33xun15mrcTVm-11
+
+
+Requirements for this screen:
+- AppLogoTitle "On the GO!" consistent with previous screens
+- PageHeading "Your Trips"
+- AddNewTripInputField with placeholder "Add a new trip"
+  - AddNewTripButton "+" on the right
+  - Tapping the button navigates to TripNameAndDatesStepOnePage
+- SavedTripsSectionLabel "Saved Trips"
+- TripCountText showing number of trips (e.g. "3 trips") 
+  — hardcode placeholder data for now, Supabase wired up later
+- TripCard is a reusable component containing:
+  - TripCoverImage (dynamic destination photo)
+  - TripNameText (dynamic — e.g. "Spring Break 2026")
+  - TripLocationIcon + TripLocationText (dynamic — e.g. 
+    "Cancun, Mexico")
+  - TripDateRangeIcon + TripDateRangeText (dynamic — e.g. 
+    "Mar 1 - Mar 7")
+  - Tapping a card navigates to that trip's detail screen
+- Show at least 2 hardcoded placeholder TripCards for now
+- TripCard list should be scrollable if more than 2 trips
+- BottomNavigationBar with 5 tabs:
+  - TripsTabItem
+  - ItineraryTabItem
+  - VotingTabItem
+  - CalendarTabItem
+  - InviteTabItem
+  - No tab currently active on this screen
+- Background color #5B9BD5
+- Responsive across all iPhone sizes using SafeAreaView
+
+
+Note: TripCard will be reused across multiple screens — 
+build it as a standalone reusable component from the start.
+
+
+Confirm when done and show me what the screen looks like.
+
+Prompt 8 — InviteCollaboratorsStepTwoPage
+Read SPEC-2.md before doing anything.
+
+
+Build the next screen — InviteCollaboratorsStepTwoPage:
+https://www.figma.com/design/4JaA1ChPKpF3eSGhCL54m0/Wireframes-for-Claude-Code?node-id=3-924&t=gRb33xun15mrcTVm-11
+
+
+Requirements for this screen:
+- AppLogoTitle "On the GO!" consistent with previous screens
+- TripCreationStepper reusing the component built in 
+  TripNameAndDatesStepOnePage with this state:
+  - StepOneCircleInactive — calendar icon
+  - StepTwoCircleActive (yellow highlighted) — group icon
+  - StepThreeCircleInactive — location icon
+- InviteCrewHeading "Invite your Crew"
+- TripCodeCard containing:
+  - TripCodeLabel "Trip Code"
+  - TripCodeSubtitle "Share this code with your crew!"
+  - TripCodeFieldContainer with:
+    - TripCodeGeneratedField showing auto-generated 
+      6-character code — generate this randomly on 
+      screen load for now, Supabase wired up later
+    - CopyCodeButton with CopyCodeIcon — tapping copies 
+      the code to clipboard and shows a brief 
+      confirmation message
+- InviteByEmailLabel "Invite by Email"
+- InviteEmailInputField with placeholder "crew@email.com"
+- AddEmailButton "+" — tapping adds the email to the 
+  CollaboratorsRow below and clears the input field
+- CollaboratorsRow showing invited members as 
+  CollaboratorCard instances:
+  - CollaboratorAvatarIcon
+  - CollaboratorNameText (dynamic)
+  - Show 3 hardcoded placeholder collaborators for now
+- BackNavigationButton — navigates back to 
+  TripNameAndDatesStepOnePage
+- NextNavigationButton — navigates to 
+  ChooseDestinationPage
+- Background color #5B9BD5
+- Responsive across all iPhone sizes using SafeAreaView
+
+
+Note: This is not a separate page from a future 
+InviteCollaboratorsPage — this IS the invite step in 
+the trip creation flow. The stepper should reflect 
+step 2 being active.
+
+
+Confirm when done and show me what the screen looks like.
+
+Prompt 9 — ChooseDestinationPageStepThree
+Read SPEC-2.md before doing anything.
+
+
+Build the next screen — ChooseDestinationPageStepThree:
+https://www.figma.com/design/4JaA1ChPKpF3eSGhCL54m0/Wireframes-for-Claude-Code?node-id=3-154&t=gRb33xun15mrcTVm-11
+
+
+Requirements for this screen:
+- AppLogoTitle "On the GO!" consistent with previous screens
+- TripCreationStepper reusing the component built in 
+  TripNameAndDatesStepOnePage with this state:
+  - StepOneCircleInactive — calendar icon
+  - StepTwoCircleInactive — group icon
+  - StepThreeCircleActive (yellow highlighted) — location icon
+- WhereTo Heading "Where to?"
+- CustomDestinationInputField with placeholder 
+  "Add custom destination"
+- AddDestinationButton "+" on the right — tapping adds 
+  the destination to the trip
+- TopTrendingLabel "Top 10 Trending..."
+- TrendingDestinationsGrid showing a 2x2 grid of 
+  TrendingDestinationCard instances:
+  - TrendingDestinationImage (dynamic destination photo)
+  - Each card is tappable and selects that destination
+  - Hardcode 4 placeholder destination images for now
+  - Cards should be scrollable to reveal more destinations
+- Selected destination should show a visual highlight 
+  so user knows which one is chosen
+- BackNavigationButton — navigates back to 
+  InviteCollaboratorsStepTwoPage
+- NextNavigationButton — navigates to YourSavedTripsPage 
+  only if a destination is selected, show error if not
+- Background color #5B9BD5
+- Responsive across all iPhone sizes using SafeAreaView
+
+
+Note: This is the final step (step 3) of the trip creation 
+flow. After tapping Next the trip should be saved and the 
+user navigated to YourSavedTripsPage where the new trip 
+appears in the list. Trip data is hardcoded for now — 
+Supabase will be wired up later.
+
+
+Confirm when done and show me what the screen looks like.
+
+Prompt 10 — YourItineraryPage
+Read SPEC-2.md before doing anything.
+
+
+Build the next screen — YourItineraryPage:
+https://www.figma.com/design/4JaA1ChPKpF3eSGhCL54m0/Wireframes-for-Claude-Code?node-id=3-208&t=gRb33xun15mrcTVm-11
+
+
+Requirements for this screen:
+- AppLogoTitle "On the GO!" consistent with previous screens
+- ItinerarySectionLabel "My Itinerary"
+- AttachButton with AttachIcon (paperclip) and 
+  AttachButtonLabel "Attach" — tapping shows 
+  AttachDropdownMenu with two options:
+  - UploadFileOption with UploadFileIcon — opens 
+    Expo Document Picker
+  - TakePhotoOption with TakePhotoIcon — opens 
+    Expo Camera
+  - Dropdown dismisses when option selected or 
+    user taps elsewhere
+- ToBeVotedOnLabel "To be voted on:"
+- AddItineraryItemInputField with placeholder 
+  "Add a new item to your list"
+  - AddItineraryItemIcon "+" inside the field
+  - Tapping opens ItineraryManuallyAddItemPage
+- ItineraryItemsList — scrollable list of 
+  ItineraryItemCard instances:
+  - Each card is a reusable ItineraryItemCard component
+  - ItineraryItemText (dynamic — e.g. "F1 Arcade")
+  - Tapping a card expands it to show:
+    - ItineraryItemTitle
+    - ItineraryItemDescription
+    - ItineraryItemScheduledText (e.g. "Planned for 
+      4/15 at 1:00 pm")
+  - Tapping again collapses it back
+  - Show 5 hardcoded placeholder items for now
+- ItineraryItemsList is dynamic — items are added and 
+  removed by users and the list length varies per trip
+- BottomNavigationBar with ItineraryTabItem active (yellow)
+- Background color #5B9BD5
+- Responsive across all iPhone sizes using SafeAreaView
+
+
+Note: ItineraryAttachItineraryPage and 
+ItineraryExpandItemPage are NOT separate pages — they 
+are states of this screen. The attach dropdown and 
+expanded item card should be built as conditional 
+states within YourItineraryPage, not separate screens.
+
+
+Confirm when done and show me what the screen looks like.
+
+Prompt 11 — Three Itinerary States
+Read SPEC-2.md before doing anything.
+
+
+YourItineraryPage is built. Now implement the following 
+three states/overlays within it — do NOT build these as 
+separate screens:
+
+
+--- STATE 1: AttachDropdownMenu (AttachItineraryPage) ---
+Reference: https://www.figma.com/design/4JaA1ChPKpF3eSGhCL54m0/Wireframes-for-Claude-Code?node-id=3-267&t=gRb33xun15mrcTVm-11
+
+
+- When AttachButton is tapped, show AttachDropdownMenu 
+  as an overlay beneath the button containing:
+  - UploadFileOption with UploadFileIcon and 
+    UploadFileLabel "Upload file"
+    — opens Expo Document Picker on tap
+  - TakePhotoOption with TakePhotoIcon and 
+    TakePhotoLabel "Take Photo"
+    — opens Expo Camera on tap
+- Dropdown dismisses when:
+  - An option is selected
+  - User taps anywhere outside the dropdown
+
+
+--- STATE 2: Expanded Item (ItineraryExpandItemPage) ---
+Reference: https://www.figma.com/design/4JaA1ChPKpF3eSGhCL54m0/Wireframes-for-Claude-Code?node-id=3-331&t=gRb33xun15mrcTVm-11
+
+
+- When an ItineraryItemCard is tapped, expand it to show:
+  - ItineraryItemTitle (e.g. "F1 Arcade")
+  - ItineraryItemDescription (full description text)
+  - ItineraryItemScheduledText (e.g. "Planned for 
+    4/15 at 1:00 pm")
+- Tapping the expanded card again collapses it back 
+  to default state
+- Only one card can be expanded at a time — expanding 
+  a new card collapses any previously expanded one
+
+
+--- STATE 3: Add Activity Form (ItineraryManuallyAddItemPage) ---
+Reference: https://www.figma.com/design/4JaA1ChPKpF3eSGhCL54m0/Wireframes-for-Claude-Code?node-id=3-852&t=gRb33xun15mrcTVm-11
+
+
+- When AddItineraryItemInputField is tapped, show 
+  AddActivityFormCard as an overlay containing:
+  - AddActivityFormTitle "Add Activity"
+  - ActivityTitleLabel + ActivityTitleInputField
+    placeholder "e.g., Visit the local market"
+  - ActivityDescriptionLabel + ActivityDescriptionInputField
+    multiline text box, placeholder "e.g., It is a 
+    year-round, indoor marketplace..."
+  - ActivityDateLabel + ActivityDateInputField
+    placeholder "Select date" — opens native iOS 
+    date picker on tap
+  - ActivityTimeLabel + ActivityTimeInputField
+    placeholder "--:-- --" — opens native iOS 
+    time picker on tap
+  - Submitting the form adds the new item to 
+    ItineraryItemsList
+  - All fields except description are required
+  - Form dismisses when submitted or user taps 
+    outside it
+
+
+Confirm when all three states are working correctly 
+and show me what each looks like.
+
+Prompt 12 — CalendarPage
+Read SPEC-2.md before doing anything.
+
+
+Build the next screen — CalendarPage:
+https://www.figma.com/design/4JaA1ChPKpF3eSGhCL54m0/Wireframes-for-Claude-Code?node-id=3-386&t=gRb33xun15mrcTVm-11
+
+
+Requirements for this screen:
+- AppLogoTitle "On the GO!" consistent with previous screens
+- CalendarSectionLabel "My Calendar"
+- CalendarOuterContainer with CalendarInnerCard containing 
+  a fully interactive monthly calendar:
+  - Do NOT try to recreate the calendar from the Figma image
+  - Use react-native-calendars library to build this
+  - CalendarMonthYearLabel (e.g. "April 2026") — updates 
+    dynamically as user navigates months
+  - CalendarPreviousMonthButton "<" — navigates to 
+    previous month
+  - CalendarNextMonthButton ">" — navigates to next month
+  - CalendarSelectedDayIndicator — yellow circle highlight 
+    on the selected date
+  - CalendarInactiveDayText — greyed out days from 
+    adjacent months, not selectable
+  - Tapping a date navigates to CalendarAddingActivityPage 
+    showing activities scheduled for that day
+- Style the calendar to match the app:
+  - Selected day circle color: #F5C518 (yellow)
+  - Today indicator color: #2B5BA8 (dark blue)
+  - Font: consistent with rest of app
+- BottomNavigationBar with no tab currently active
+- Background color #5B9BD5
+- Responsive across all iPhone sizes using SafeAreaView
+
+
+Note: CalendarPage displays trip activities pulled from 
+YourItineraryPage. Days that have scheduled activities 
+should show a subtle dot indicator below the date number 
+so users can see at a glance which days are planned.
+
+
+Confirm when done and show me what the screen looks like.
+
+Prompt 13 — CalendarAddingActivityPage
+Read SPEC-2.md before doing anything.
+
+
+Build the next screen — CalendarAddingActivityPage:
+https://www.figma.com/design/4JaA1ChPKpF3eSGhCL54m0/Wireframes-for-Claude-Code?node-id=3-430&t=gRb33xun15mrcTVm-11
+
+
+Requirements for this screen:
+- AppLogoTitle "On the GO!" consistent with previous screens
+- CalendarSectionLabel "My Calendar"
+- CalendarDayViewContainer with:
+  - CalendarSelectedDateLabel showing the tapped date 
+    (e.g. "Tuesday 4th April") — dynamic, passed from 
+    CalendarPage
+  - TimeSlotsList showing hourly time slots from 
+    10:00 am to 8:00 pm:
+    - Each TimeSlotLabel is a consistent reusable 
+      component
+    - TimeSlots are evenly spaced vertically
+  - CalendarActivityBlock for each scheduled activity:
+    - CalendarActivityTitle (dynamic — e.g. "Day trip 
+      to Newport", "Dinner at Strega")
+    - Block height reflects activity duration — a 
+      multi-hour activity spans multiple time slots
+    - Block is positioned at the correct start time 
+      on the timeline
+    - Activities pulled from ItineraryItemsList for 
+      the selected date
+  - TimeSlotsList and CalendarActivityBlocks should 
+    be scrollable if content exceeds screen height
+- BackButton — navigates back to CalendarPage
+- BottomNavigationBar with no tab currently active
+- Background color #5B9BD5
+- Responsive across all iPhone sizes using SafeAreaView
+
+
+Note: CalendarAddingActivityPage is the day view that 
+appears when a date is tapped on CalendarPage. It is 
+not a separate standalone page — it receives the 
+selected date and pulls matching activities from the 
+itinerary automatically. Show 2 hardcoded placeholder 
+activities for now — Supabase will be wired up later.
+
+
+Confirm when done and show me what the screen looks like.
+
+Prompt 14 — VotingTutorial1Page
+Read SPEC-2.md before doing anything.
+
+
+Build the next screen — VotingTutorial1Page:
+https://www.figma.com/design/4JaA1ChPKpF3eSGhCL54m0/Wireframes-for-Claude-Code?node-id=3-542&t=gRb33xun15mrcTVm-11
+
+
+Requirements for this screen:
+- ActivityBackgroundImage fills the entire screen 
+  (dynamic — changes per activity, hardcode a 
+  placeholder image for now)
+- BackgroundDimOverlay — dark transparent overlay 
+  on top of the image
+- ActivityNameLabel showing activity name (e.g. 
+  "F1 Arcade") — centered, dynamic
+- SwipeDividerLine — vertical dashed line down 
+  the center of the screen
+- SwipeLeftLabel "Left to dislike" on the left side
+- SwipeRightLabel "Right to like" on the right side
+- SwipeLeftArrow pointing left
+- SwipeRightArrow pointing right
+- DislikeIcon — red X circle on the left
+- LikeIcon — green checkmark circle on the right
+- BackButton with BackButtonIcon — navigates back 
+  to previous screen
+- This is tutorial step 1 of 2 — tapping anywhere 
+  on the screen (except BackButton) advances to 
+  VotingTutorial2Page
+
+
+Important: This tutorial overlay is shown ONLY on 
+the user's first time entering the voting feature. 
+Use AsyncStorage to track whether the user has seen 
+the tutorial. If they have, skip both tutorial screens 
+and go directly to VoteOnActivityPage.
+
+
+- Background is full screen, no BottomNavigationBar 
+  on this screen
+- Responsive across all iPhone sizes using SafeAreaView
+
+
+Confirm when done and show me what the screen looks like.
+
+Prompt 15 — VotingTutorial2Page
+Read SPEC-2.md before doing anything.
+
+
+Build the next screen — VotingTutorial2Page:
+https://www.figma.com/design/4JaA1ChPKpF3eSGhCL54m0/Wireframes-for-Claude-Code?node-id=3-583&t=gRb33xun15mrcTVm-11
+
+
+Requirements for this screen:
+- ActivityBackgroundImage fills the entire screen — 
+  same placeholder image as VotingTutorial1Page for 
+  consistency
+- BackgroundDimOverlay — same dark transparent overlay 
+  as VotingTutorial1Page
+- ActivityNameLabel showing activity name (e.g. 
+  "F1 Arcade") — same as VotingTutorial1Page
+- SwipeUpArrow — white upward pointing arrow centered 
+  on screen
+- SwipeUpLabel "Up to skip" — centered above the arrow
+- BackButton with BackButtonIcon — navigates back to 
+  VotingTutorial1Page
+- Tapping anywhere on the screen (except BackButton) 
+  advances to VoteOnActivityPage and marks the tutorial 
+  as completed in AsyncStorage so it never shows again
+
+
+Important: This is tutorial step 2 of 2. After this 
+screen the user enters the real voting flow. Make sure 
+AsyncStorage is updated here so both tutorial screens 
+are skipped on all future visits to the voting feature.
+
+
+- Background is full screen, no BottomNavigationBar 
+  on this screen
+- Responsive across all iPhone sizes using SafeAreaView
+
+
+Confirm when done and show me what the screen looks like.
+
+Prompt 16 — VoteOnActivityPage
+Read SPEC-2.md before doing anything.
+
+
+Build the next screen — VoteOnActivityPage:
+https://www.figma.com/design/4JaA1ChPKpF3eSGhCL54m0/Wireframes-for-Claude-Code?node-id=3-478&t=gRb33xun15mrcTVm-11
+
+
+Requirements for this screen:
+- ActivityBackgroundImage fills the entire screen
+  — dynamic, changes with each activity from 
+  ItineraryItemsList, hardcode placeholder for now
+- BackgroundDimOverlay — dark transparent overlay 
+  on top of the image
+- BackButton with BackButtonIcon top left — navigates 
+  back to previous screen
+- ActivityInfoCard at the bottom of the screen:
+  - ActivityNameText (dynamic — e.g. "F1 Arcade")
+  - ReadMoreButton "Read More" — tapping expands 
+    ActivityInfoCard upward to reveal 
+    ActivityDescriptionText (short description preview)
+  - Tapping outside the expanded card or a close 
+    gesture collapses it back to default state
+- Swipe gestures are the core interaction:
+  - Swipe RIGHT — like the activity (shows green 
+    LikeIcon briefly as visual feedback)
+  - Swipe LEFT — dislike the activity (shows red 
+    DislikeIcon briefly as visual feedback)
+  - Swipe UP — skip the activity
+  - After each swipe load the next activity 
+    automatically
+  - Use react-native-gesture-handler for swipe 
+    detection
+- When all activities have been voted on navigate 
+  to AllActivitiesVotedPage
+- Vote values (like/dislike/skip) should be stored 
+  locally using AsyncStorage for now — Supabase 
+  wired up later
+- Background is full screen, no BottomNavigationBar 
+  on this screen
+- Responsive across all iPhone sizes using SafeAreaView
+
+
+Note: ActivityDescriptionExpandedPage is NOT a 
+separate screen — it is VoteOnActivityPage with 
+ActivityInfoCard expanded. Build it as a conditional 
+expanded state of ActivityInfoCard, not a new screen.
+
+
+Confirm when done and show me what the screen looks like.
+
+Prompt 17 — VoteOnActivityPage Fix
+Read SPEC-2.md before doing anything.
+
+
+VoteOnActivityPage was not built correctly — it is 
+only showing a placeholder "Voting page coming soon" 
+message. This needs to be fully built now.
+
+
+First diagnose why the screen is not rendering:
+1. Check the navigation setup — is VoteOnActivityPage 
+   properly registered in the navigation stack?
+2. Check if react-native-gesture-handler is installed 
+   and configured correctly — if not, install it now
+3. Check if there are any import errors or missing 
+   dependencies preventing the screen from loading
+
+
+Then build VoteOnActivityPage properly:
+https://www.figma.com/design/4JaA1ChPKpF3eSGhCL54m0/Wireframes-for-Claude-Code?node-id=3-478&t=gRb33xun15mrcTVm-11
+
+
+Requirements:
+- ActivityBackgroundImage fills the entire screen
+  — dynamic, changes with each activity from 
+  ItineraryItemsList, hardcode placeholder for now
+- BackgroundDimOverlay — dark transparent overlay 
+  on top of the image
+- BackButton with BackButtonIcon top left — navigates 
+  back to previous screen
+- ActivityInfoCard at the bottom of the screen:
+  - ActivityNameText (dynamic — e.g. "F1 Arcade")
+  - ReadMoreButton "Read More" — tapping expands 
+    ActivityInfoCard upward to reveal 
+    ActivityDescriptionText
+  - Tapping outside collapses it back
+- Swipe gestures are the core interaction:
+  - Swipe RIGHT — like (green LikeIcon feedback)
+  - Swipe LEFT — dislike (red DislikeIcon feedback)
+  - Swipe UP — skip
+  - After each swipe load the next activity
+  - Use react-native-gesture-handler for swipes
+- When all activities voted navigate to 
+  AllActivitiesVotedPage
+- Store votes in AsyncStorage for now
+- Full screen, no BottomNavigationBar
+- Responsive across all iPhone sizes using SafeAreaView
+
+
+Do not use any placeholder text. Build the complete 
+screen. Confirm when done and show me what it looks like.
+
+Prompt 18 — InviteMoreCrewPage
+Read SPEC-2.md before doing anything.
+
+
+Build the next screen — InviteMoreCrewPage:
+https://www.figma.com/design/4JaA1ChPKpF3eSGhCL54m0/Wireframes-for-Claude-Code?node-id=3-648&t=gRb33xun15mrcTVm-11
+
+
+Requirements for this screen:
+- AppLogoTitle "On the GO!" consistent with previous screens
+- UserProfileAvatarIcon — blue person icon top right
+- InviteMoreCrewHeading "Invite More of Your Crew!"
+- Reuse all invite components already built in 
+  InviteCollaboratorsStepTwoPage:
+  - TripCodeCard with:
+    - TripCodeLabel "Trip Code"
+    - TripCodeSubtitle "Share this code with your crew!"
+    - TripCodeFieldContainer with:
+      - TripCodeGeneratedField showing the existing 
+        trip code — same code generated during trip 
+        creation, not a new one
+      - CopyCodeButton — copies code to clipboard
+  - InviteByEmailLabel "Invite by Email"
+  - InviteEmailInputField placeholder "crew@email.com"
+  - AddEmailButton "+" — adds email to collaborators list
+  - CollaboratorsRow showing current trip members as 
+    CollaboratorCard instances:
+    - CollaboratorAvatarIcon
+    - CollaboratorNameText (dynamic)
+    - Show 3 hardcoded placeholder collaborators for now
+- BackNavigationButton — navigates back
+- NextNavigationButton — navigates forward
+- BottomNavigationBar with InviteTabItem active (yellow)
+- Background color #5B9BD5
+- Responsive across all iPhone sizes using SafeAreaView
+
+
+Important: This screen has NO TripCreationStepper — 
+it is accessed from the Invite tab in BottomNavigationBar, 
+not the trip creation flow. Reuse the invite components 
+from InviteCollaboratorsStepTwoPage rather than 
+duplicating the code.
+
+
+Confirm when done and show me what the screen looks like.
+
+Prompt 19 — ProfilePage
+Read SPEC-2.md before doing anything.
+
+
+Build the next screen — ProfilePage:
+https://www.figma.com/design/4JaA1ChPKpF3eSGhCL54m0/Wireframes-for-Claude-Code?node-id=3-711&t=gRb33xun15mrcTVm-11
+
+
+Requirements for this screen:
+- AppLogoTitle "On the GO!" consistent with previous screens
+- UserStatsCard containing:
+  - UserAvatarIcon — blue person illustration
+  - UserNameText (dynamic — e.g. "Lily") — hardcode 
+    placeholder for now, Supabase wired up later
+  - TripsTakenDivider — horizontal line between stats
+  - TripsTakenText (dynamic — e.g. "3 trips taken") 
+    — hardcode placeholder for now
+  - HoursSavedText (dynamic — e.g. "85 hours saved") 
+    — hardcode placeholder for now
+- PastTripsCard containing:
+  - MemoryLaneIcon — "Memory Lane" sign illustration
+  - PastTripsLabel "Past trips"
+  - Tapping navigates to a placeholder PastTripsPage 
+    for now
+- SettingsMenuCard — build as a proper interactive 
+  list from scratch, do NOT try to recreate from 
+  the Figma image. Build the following items in 
+  this exact order:
+  - AccountSettingsIcon + AccountSettingsLabel 
+    "Account settings" + AccountSettingsChevron ">"
+    + AccountSettingsNotificationDot (small red dot 
+    — visible conditionally, hardcode as visible 
+    for now)
+  - GetHelpIcon + GetHelpLabel "Get help" 
+    + GetHelpChevron ">"
+  - ViewProfileIcon + ViewProfileLabel "View profile" 
+    + ViewProfileChevron ">"
+  - PrivacyIcon + PrivacyLabel "Privacy" 
+    + PrivacyChevron ">"
+  - LogOutIcon + LogOutLabel "Log out" 
+    — no chevron, tapping logs user out and 
+    navigates back to SignInOrSignUpPage
+  - Each row is a reusable SettingsMenuItem component
+  - All rows except Log Out have a right chevron
+- UserProfileAvatarIcon top right — tapping navigates 
+  to this ProfilePage (already on it, no action needed)
+- BottomNavigationBar with no tab currently active 
+  — ProfilePage is accessed via UserProfileAvatarIcon 
+  not the bottom nav
+- Background color #5B9BD5
+- Responsive across all iPhone sizes using SafeAreaView
+
+
+Note: AccountSettingsNotificationDot should only appear 
+when there are pending account notifications — hardcode 
+as visible for now, make it conditional later when 
+Supabase is wired up.
+
+
+Confirm when done and show me what the screen looks like.
+
