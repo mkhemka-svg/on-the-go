@@ -41,6 +41,10 @@ export default function RootLayout() {
         <Stack.Screen name="verify-otp" />
         <Stack.Screen name="choose-trip" />
         <Stack.Screen name="saved-trips" />
+        <Stack.Screen name="itinerary" />
+        <Stack.Screen name="vote" />
+        <Stack.Screen name="calendar" />
+        <Stack.Screen name="invite" />
         <Stack.Screen name="(onboarding)" />
         <Stack.Screen name="(tabs)" />
       </Stack>
