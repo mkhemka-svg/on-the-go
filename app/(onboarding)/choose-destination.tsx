@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontFamily, Radius } from '@/constants/theme';
 import TripCreationStepper from '@/components/TripCreationStepper';
+import { commitDraftAsTrip } from '@/constants/tripStore';
 
 const { width, height } = Dimensions.get('window');
 
@@ -162,12 +163,12 @@ export default function ChooseDestinationPage() {
     setDestinationError('');
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!selectedName) {
       setDestinationError('Please select or enter a destination.');
       return;
     }
-    // TODO: save trip to Supabase with selectedName when auth is wired up
+    await commitDraftAsTrip(selectedName);
     router.replace('/saved-trips');
   };
 

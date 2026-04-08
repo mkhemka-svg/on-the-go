@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,42 +14,25 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontFamily, Radius } from '@/constants/theme';
 import TripCard, { TripCardData } from '@/components/TripCard';
 import BottomNavigationBar from '@/components/BottomNavigationBar';
+import { loadTrips } from '@/constants/tripStore';
 
 const { width, height } = Dimensions.get('window');
 
-// ── Placeholder data — replace with Supabase query when auth is wired up ──
-const PLACEHOLDER_TRIPS: TripCardData[] = [
-  {
-    id: '1',
-    name: 'Spring Break 2026',
-    location: 'Cancún, Mexico',
-    startDate: 'Mar 1',
-    endDate: 'Mar 7',
-    coverImageUrl:
-      'https://images.unsplash.com/photo-1552074284-5e88ef1aef18?w=800&auto=format&fit=crop',
-  },
-  {
-    id: '2',
-    name: 'Girls Trip NYC',
-    location: 'New York, USA',
-    startDate: 'Jun 15',
-    endDate: 'Jun 20',
-    coverImageUrl:
-      'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800&auto=format&fit=crop',
-  },
-  {
-    id: '3',
-    name: 'Ski Trip Aspen',
-    location: 'Aspen, Colorado',
-    startDate: 'Jan 10',
-    endDate: 'Jan 15',
-    coverImageUrl:
-      'https://images.unsplash.com/photo-1548777123-e216912df7d8?w=800&auto=format&fit=crop',
-  },
-];
-
 export default function YourSavedTripsPage() {
   const router = useRouter();
+  const [trips, setTrips] = useState<TripCardData[]>([]);
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    loadTrips().then(setTrips);
+  }, []);
+
+  const filtered = search.trim()
+    ? trips.filter(t =>
+        t.name.toLowerCase().includes(search.toLowerCase()) ||
+        t.location.toLowerCase().includes(search.toLowerCase())
+      )
+    : trips;
 
   const handleTripPress = (id: string) => {
     // TODO: navigate to that trip's itinerary when Supabase is wired up
@@ -81,8 +65,9 @@ export default function YourSavedTripsPage() {
             style={styles.addInput}
             placeholder="Add a new trip"
             placeholderTextColor={Colors.lightGray}
-            editable={false}          // tapping the whole row navigates
-            pointerEvents="none"
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
           />
         </View>
         <TouchableOpacity
@@ -97,7 +82,7 @@ export default function YourSavedTripsPage() {
       {/* ── Saved trips section ── */}
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionLabel}>Saved Trips</Text>
-        <Text style={styles.tripCount}>{PLACEHOLDER_TRIPS.length} trips</Text>
+        <Text style={styles.tripCount}>{filtered.length} {filtered.length === 1 ? 'trip' : 'trips'}</Text>
       </View>
 
       {/* ── Trip card list ── */}
@@ -106,9 +91,17 @@ export default function YourSavedTripsPage() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {PLACEHOLDER_TRIPS.map(trip => (
-          <TripCard key={trip.id} trip={trip} onPress={handleTripPress} />
-        ))}
+        {filtered.length === 0 ? (
+          <Text style={styles.emptyText}>
+            {trips.length === 0
+              ? 'No trips yet. Create your first one!'
+              : 'No trips match your search.'}
+          </Text>
+        ) : (
+          filtered.map(trip => (
+            <TripCard key={trip.id} trip={trip} onPress={handleTripPress} />
+          ))
+        )}
       </ScrollView>
 
       {/* ── Bottom navigation ── */}
@@ -221,5 +214,12 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 24,
     paddingBottom: 12,
+  },
+  emptyText: {
+    fontFamily: FontFamily.merriweather,
+    fontSize: width * 0.038,
+    color: 'rgba(255,255,255,0.65)',
+    textAlign: 'center',
+    marginTop: height * 0.06,
   },
 });

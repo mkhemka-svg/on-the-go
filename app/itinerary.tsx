@@ -69,8 +69,6 @@ export default function ItineraryPage() {
   const [formTimeError, setFormTimeError]       = useState('');
   const [showDatePicker, setShowDatePicker]     = useState(false);
   const [showTimePicker, setShowTimePicker]     = useState(false);
-  const [pendingDate, setPendingDate]           = useState(new Date());
-  const [pendingTime, setPendingTime]           = useState(new Date());
 
   // ── Toggle card expand ─────────────────────────────────────
   const handleToggle = (id: string) => {
@@ -128,8 +126,6 @@ export default function ItineraryPage() {
     setFormTimeError('');
     setShowDatePicker(false);
     setShowTimePicker(false);
-    setPendingDate(now);
-    setPendingTime(now);
     setAddModalVisible(true);
   };
 
@@ -159,7 +155,9 @@ export default function ItineraryPage() {
     };
     const updated = [...items, newItem];
     setItems(updated);
-    void saveItems(updated);   // persist so vote screen picks it up
+    saveItems(updated).catch(e =>
+      console.warn('[itinerary] Failed to persist items:', e)
+    );
     setAddModalVisible(false);
   };
 
@@ -276,27 +274,79 @@ export default function ItineraryPage() {
             <Text style={styles.fieldLabel}>Date *</Text>
             <TouchableOpacity
               style={[styles.dateField, !!formDateError && styles.fieldInputError]}
-              onPress={() => { setPendingDate(formDate); setShowDatePicker(true); }}
+              onPress={() => {
+                setShowTimePicker(false);
+                const opening = showDatePicker === false;
+                setShowDatePicker(prev => !prev);
+                // Mark selected immediately so the current spinner value counts
+                if (opening) { setDateSelected(true); setFormDateError(''); }
+              }}
               activeOpacity={0.8}
             >
               <Ionicons name="calendar-outline" size={16} color={dateSelected ? Colors.darkNavy : Colors.lightGray} />
               <Text style={dateSelected ? styles.dateFieldText : styles.dateFieldPlaceholder}>
                 {dateSelected ? formatDate(formDate) : 'Select date'}
               </Text>
+              <Ionicons
+                name={showDatePicker ? 'chevron-up' : 'chevron-down'}
+                size={14}
+                color={Colors.lightGray}
+                style={{ marginLeft: 'auto' }}
+              />
             </TouchableOpacity>
+            {showDatePicker && (
+              <View style={styles.inlinePicker}>
+                <DateTimePicker
+                  value={formDate}
+                  mode="date"
+                  display="spinner"
+                  onChange={(_, d) => {
+                    if (d) { setFormDate(d); setDateSelected(true); setFormDateError(''); }
+                  }}
+                  textColor={Colors.darkNavy}
+                  style={styles.dateTimePickerSpinner}
+                />
+              </View>
+            )}
             {!!formDateError && <Text style={styles.fieldError}>{formDateError}</Text>}
 
             <Text style={styles.fieldLabel}>Time *</Text>
             <TouchableOpacity
               style={[styles.dateField, !!formTimeError && styles.fieldInputError]}
-              onPress={() => { setPendingTime(formTime); setShowTimePicker(true); }}
+              onPress={() => {
+                setShowDatePicker(false);
+                const opening = showTimePicker === false;
+                setShowTimePicker(prev => !prev);
+                // Mark selected immediately so the current spinner value counts
+                if (opening) { setTimeSelected(true); setFormTimeError(''); }
+              }}
               activeOpacity={0.8}
             >
               <Ionicons name="time-outline" size={16} color={timeSelected ? Colors.darkNavy : Colors.lightGray} />
               <Text style={timeSelected ? styles.dateFieldText : styles.dateFieldPlaceholder}>
                 {timeSelected ? formatTime(formTime) : '--:-- --'}
               </Text>
+              <Ionicons
+                name={showTimePicker ? 'chevron-up' : 'chevron-down'}
+                size={14}
+                color={Colors.lightGray}
+                style={{ marginLeft: 'auto' }}
+              />
             </TouchableOpacity>
+            {showTimePicker && (
+              <View style={styles.inlinePicker}>
+                <DateTimePicker
+                  value={formTime}
+                  mode="time"
+                  display="spinner"
+                  onChange={(_, t) => {
+                    if (t) { setFormTime(t); setTimeSelected(true); setFormTimeError(''); }
+                  }}
+                  textColor={Colors.darkNavy}
+                  style={styles.dateTimePickerSpinner}
+                />
+              </View>
+            )}
             {!!formTimeError && <Text style={styles.fieldError}>{formTimeError}</Text>}
 
             <View style={styles.formButtonRow}>
@@ -318,56 +368,6 @@ export default function ItineraryPage() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-
-      {/* ── Date Picker Modal ── */}
-      {showDatePicker && (
-        <Modal transparent animationType="fade">
-          <View style={styles.pickerModal}>
-            <View style={styles.pickerCard}>
-              <DateTimePicker
-                value={pendingDate}
-                mode="date"
-                display="spinner"
-                onChange={(_, d) => { if (d) setPendingDate(d); }}
-                textColor={Colors.darkNavy}
-              />
-              <View style={styles.pickerButtons}>
-                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                  <Text style={styles.pickerCancel}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => { setFormDate(pendingDate); setDateSelected(true); setFormDateError(''); setShowDatePicker(false); }}>
-                  <Text style={styles.pickerDone}>Done</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-      )}
-
-      {/* ── Time Picker Modal ── */}
-      {showTimePicker && (
-        <Modal transparent animationType="fade">
-          <View style={styles.pickerModal}>
-            <View style={styles.pickerCard}>
-              <DateTimePicker
-                value={pendingTime}
-                mode="time"
-                display="spinner"
-                onChange={(_, t) => { if (t) setPendingTime(t); }}
-                textColor={Colors.darkNavy}
-              />
-              <View style={styles.pickerButtons}>
-                <TouchableOpacity onPress={() => setShowTimePicker(false)}>
-                  <Text style={styles.pickerCancel}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => { setFormTime(pendingTime); setTimeSelected(true); setFormTimeError(''); setShowTimePicker(false); }}>
-                  <Text style={styles.pickerDone}>Done</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-      )}
 
       <BottomNavigationBar activeTab="itinerary" />
     </SafeAreaView>
@@ -615,32 +615,14 @@ const styles = StyleSheet.create({
     color: Colors.white,
   },
 
-  // ── Date/Time Picker Modal ──
-  pickerModal: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.35)',
+  // ── Inline date/time picker ──
+  inlinePicker: {
+    backgroundColor: '#f4f7fd',
+    borderRadius: Radius.md,
+    marginBottom: height * 0.012,
+    overflow: 'hidden',
   },
-  pickerCard: {
-    backgroundColor: Colors.white,
-    borderTopLeftRadius: Radius.xl,
-    borderTopRightRadius: Radius.xl,
-    paddingBottom: height * 0.04,
-  },
-  pickerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: H_PADDING,
-    paddingBottom: 8,
-  },
-  pickerCancel: {
-    fontFamily: FontFamily.merriweather,
-    fontSize: width * 0.04,
-    color: Colors.lightGray,
-  },
-  pickerDone: {
-    fontFamily: FontFamily.merriweatherBold,
-    fontSize: width * 0.04,
-    color: Colors.darkNavy,
+  dateTimePickerSpinner: {
+    height: height * 0.18,
   },
 });

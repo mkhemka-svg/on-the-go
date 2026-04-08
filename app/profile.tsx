@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontFamily, Radius } from '@/constants/theme';
 import BottomNavigationBar from '@/components/BottomNavigationBar';
+import { supabase } from '@/lib/supabase';
 
 const { width, height } = Dimensions.get('window');
 
@@ -157,7 +158,10 @@ export default function ProfilePage() {
       label: 'Log out',
       hasChevron: false,
       isDestructive: true,
-      onPress: () => router.replace('/sign-in'),
+      onPress: async () => {
+        await supabase.auth.signOut();
+        router.replace('/sign-in');
+      },
     },
   ];
 

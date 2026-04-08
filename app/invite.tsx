@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontFamily } from '@/constants/theme';
 import BottomNavigationBar from '@/components/BottomNavigationBar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   Collaborator,
   AVATAR_COLORS,
@@ -27,6 +28,9 @@ import {
   useCopyCode,
 } from '@/components/InviteShared';
 
+const INVITE_CODE_KEY   = 'invite_trip_code';
+const INVITE_COLLAB_KEY = 'invite_collaborators';
+
 const { width, height } = Dimensions.get('window');
 
 // ── Main Screen ───────────────────────────────────────────────
@@ -38,9 +42,24 @@ export default function InviteMoreCrewPage() {
   const [emailInput, setEmailInput]       = useState('');
   const [collaborators, setCollaborators] = useState<Collaborator[]>(INITIAL_COLLABORATORS);
 
-  // Reuse the same trip code generated during trip creation
-  // (hardcoded generate here — will be fetched from Supabase later)
-  useEffect(() => { setTripCode(generateTripCode()); }, []);
+  // Load persisted trip code and collaborators on mount
+  useEffect(() => {
+    Promise.all([
+      AsyncStorage.getItem(INVITE_CODE_KEY),
+      AsyncStorage.getItem(INVITE_COLLAB_KEY),
+    ]).then(([storedCode, storedCollabs]) => {
+      if (storedCode) {
+        setTripCode(storedCode);
+      } else {
+        const code = generateTripCode();
+        setTripCode(code);
+        void AsyncStorage.setItem(INVITE_CODE_KEY, code);
+      }
+      if (storedCollabs) {
+        setCollaborators(JSON.parse(storedCollabs) as Collaborator[]);
+      }
+    });
+  }, []);
 
   const { copied, copiedOpacity, handleCopy } = useCopyCode(tripCode);
 
@@ -55,9 +74,11 @@ export default function InviteMoreCrewPage() {
       Alert.alert('Already added', 'This person has already been invited.');
       return;
     }
-    const name  = email.split('@')[0];
-    const color = AVATAR_COLORS[collaborators.length % AVATAR_COLORS.length];
-    setCollaborators(prev => [...prev, { id: String(Date.now()), name, email, color }]);
+    const name    = email.split('@')[0];
+    const color   = AVATAR_COLORS[collaborators.length % AVATAR_COLORS.length];
+    const updated = [...collaborators, { id: String(Date.now()), name, email, color }];
+    setCollaborators(updated);
+    void AsyncStorage.setItem(INVITE_COLLAB_KEY, JSON.stringify(updated));
     setEmailInput('');
   };
 

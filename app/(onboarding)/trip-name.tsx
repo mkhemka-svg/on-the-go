@@ -16,6 +16,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontFamily, Radius } from '@/constants/theme';
 import TripCreationStepper from '@/components/TripCreationStepper';
+import { saveDraft } from '@/constants/tripStore';
 
 const { width, height } = Dimensions.get('window');
 
@@ -59,8 +60,13 @@ export default function TripNameAndDatesPage() {
     return valid;
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!validate()) return;
+    await saveDraft({
+      name: tripName.trim(),
+      startDate: startDate ? startDate.toISOString() : null,
+      endDate:   endDate   ? endDate.toISOString()   : null,
+    });
     router.push('/(onboarding)/invite-collaborators');
   };
 

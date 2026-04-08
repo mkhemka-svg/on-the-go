@@ -25,6 +25,8 @@ import { Colors, FontFamily, Radius } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { loadItems, itemToActivity, Activity } from '@/constants/itineraryStore';
 
+const VOTE_PROGRESS_KEY = 'vote_progress';
+
 const { width, height } = Dimensions.get('window');
 
 type VoteValue = 'like' | 'dislike' | 'skip';
@@ -52,10 +54,20 @@ export default function VoteOnActivityPage() {
   const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Load activities from the same store itinerary.tsx writes to
-    loadItems().then(items => setActivities(items.map(itemToActivity)));
-    // Load user id for Supabase vote writes
-    supabase.auth.getSession().then(({ data }) => {
+    // Load activities and resume progress from where the user left off
+    Promise.all([
+      loadItems(),
+      AsyncStorage.getItem(VOTE_PROGRESS_KEY),
+      supabase.auth.getSession(),
+    ]).then(([items, savedProgress, { data }]) => {
+      const mapped = items.map(itemToActivity);
+      setActivities(mapped);
+
+      const savedIdx = savedProgress ? parseInt(savedProgress, 10) : 0;
+      const resumeIdx = Number.isFinite(savedIdx) && savedIdx < mapped.length ? savedIdx : 0;
+      currentIndexRef.current = resumeIdx;
+      setDisplayIndex(resumeIdx);
+
       userIdRef.current = data.session?.user.id ?? null;
     });
   }, []);
@@ -116,12 +128,16 @@ export default function VoteOnActivityPage() {
     // 3. After swipe exit animation, advance to next activity
     setTimeout(() => {
       if (idx + 1 >= activities.length) {
+        // All voted — clear saved progress so next session starts fresh
+        void AsyncStorage.removeItem(VOTE_PROGRESS_KEY);
         router.replace('/all-voted');
         return;
       }
       const next = idx + 1;
       currentIndexRef.current = next;
       setDisplayIndex(next);
+      // Persist progress so user can resume if they navigate away
+      void AsyncStorage.setItem(VOTE_PROGRESS_KEY, String(next));
       collapseCard();
       cardAnim.setValue(0);
       translateX.value = 0;

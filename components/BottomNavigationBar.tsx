@@ -2,7 +2,9 @@ import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, FontFamily } from '@/constants/theme';
+import { TUTORIAL_KEY } from '@/constants/votingConfig';
 
 const { width } = Dimensions.get('window');
 
@@ -70,7 +72,14 @@ export default function BottomNavigationBar({ activeTab }: Props) {
           <TouchableOpacity
             key={tab.name}
             style={styles.tab}
-            onPress={() => router.replace(tab.route as any)}
+            onPress={async () => {
+              if (tab.name === 'voting') {
+                const seen = await AsyncStorage.getItem(TUTORIAL_KEY);
+                router.replace(seen === 'true' ? '/vote' : '/vote-tutorial-1');
+              } else {
+                router.replace(tab.route as any);
+              }
+            }}
             activeOpacity={0.7}
           >
             {/* Active underline indicator */}
