@@ -3,6 +3,7 @@ import { View, Text, ActivityIndicator, StyleSheet, Dimensions } from 'react-nat
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Colors, FontFamily } from '@/constants/theme';
+import AirplaneWindowIllustration from '@/components/illustrations/AirplaneWindowIllustration';
 
 const { width, height } = Dimensions.get('window');
 
@@ -10,8 +11,9 @@ export default function LoadingPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Simulate app initialization (auth check, data prefetch, etc.)
-    // Replace with real auth/session check when Supabase is wired up
+    // TODO: replace with real Supabase session check once auth is wired up.
+    // If session exists → router.replace('/choose-trip')
+    // If no session → router.replace('/sign-in')
     const timer = setTimeout(() => {
       router.replace('/sign-in');
     }, 2500);
@@ -21,14 +23,21 @@ export default function LoadingPage() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.content}>
-        <View style={styles.logoContainer}>
-          <Text style={styles.logoText}>On the</Text>
-          <Text style={styles.logoTextAccent}>GO!</Text>
-        </View>
-        <Text style={styles.tagline}>Group travel, made easy.</Text>
+      {/* ── Logo text ── */}
+      <View style={styles.logoRow}>
+        <Text style={styles.logoText}>On the </Text>
+        <Text style={styles.logoAccent}>GO!</Text>
       </View>
 
+      {/* ── Airplane window illustration (centerpiece) ── */}
+      <View style={styles.illustrationContainer}>
+        <AirplaneWindowIllustration />
+      </View>
+
+      {/* ── Tagline ── */}
+      <Text style={styles.tagline}>Group travel, made easy.</Text>
+
+      {/* ── Loading indicator ── */}
       <View style={styles.loaderContainer}>
         <ActivityIndicator size="large" color={Colors.yellow} />
       </View>
@@ -40,42 +49,40 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.primaryBlue,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: height * 0.04,
   },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: width * 0.08,
-  },
-  logoContainer: {
+  logoRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 6,
-    marginBottom: height * 0.018,
+    alignItems: 'baseline',
+    marginTop: height * 0.02,
   },
   logoText: {
     fontFamily: FontFamily.acme,
-    fontSize: width * 0.16,
+    fontSize: width * 0.12,
     color: Colors.white,
-    lineHeight: width * 0.19,
   },
-  logoTextAccent: {
+  logoAccent: {
     fontFamily: FontFamily.acme,
-    fontSize: width * 0.16,
+    fontSize: width * 0.12,
     color: Colors.yellow,
-    lineHeight: width * 0.19,
+  },
+  illustrationContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   tagline: {
     fontFamily: FontFamily.merriweather,
-    fontSize: width * 0.042,
+    fontSize: width * 0.038,
     color: Colors.white,
-    opacity: 0.85,
+    opacity: 0.88,
+    letterSpacing: 0.3,
     textAlign: 'center',
-    letterSpacing: 0.4,
+    marginBottom: height * 0.015,
   },
   loaderContainer: {
-    paddingBottom: height * 0.06,
+    marginBottom: height * 0.02,
   },
 });

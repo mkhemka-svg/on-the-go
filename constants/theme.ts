@@ -1,5 +1,6 @@
 export const Colors = {
   primaryBlue: '#76b9ff',
+  signInBlue: '#5B9BD5',
   darkNavy: '#1d5abc',
   yellow: '#febd19',
   lightYellow: '#fef3b3',

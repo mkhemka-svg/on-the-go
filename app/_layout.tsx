@@ -38,6 +38,7 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="sign-in" />
+        <Stack.Screen name="verify-otp" />
         <Stack.Screen name="choose-trip" />
         <Stack.Screen name="saved-trips" />
         <Stack.Screen name="(onboarding)" />
