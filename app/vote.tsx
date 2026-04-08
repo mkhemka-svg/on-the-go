@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import ReanimatedLib, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, FontFamily, Radius } from '@/constants/theme';
+import { supabase } from '@/lib/supabase';
 
 const { width, height } = Dimensions.get('window');
 
@@ -95,6 +96,15 @@ export default function VoteOnActivityPage() {
   const [displayIndex, setDisplayIndex] = useState(0);
   const [isExpanded,   setIsExpanded]   = useState(false);
 
+  // userId ref — populated once on mount, stable for the session
+  const userIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      userIdRef.current = data.session?.user.id ?? null;
+    });
+  }, []);
+
   // Reanimated shared values for swipe transform
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
@@ -121,15 +131,33 @@ export default function VoteOnActivityPage() {
   const handleVote = useCallback((value: VoteValue) => {
     const idx        = currentIndexRef.current;
     const activityId = ACTIVITIES[idx].id;
+    const userId     = userIdRef.current;
 
-    // Persist vote in AsyncStorage (fire-and-forget)
+    // 1. Write to AsyncStorage immediately (local cache / offline fallback)
     void AsyncStorage.getItem('votes').then(stored => {
       const votes: Record<string, VoteValue> = stored ? JSON.parse(stored) : {};
       votes[activityId] = value;
       return AsyncStorage.setItem('votes', JSON.stringify(votes));
     });
 
-    // After swipe exit animation, advance to next activity
+    // 2. Sync vote to Supabase so all crew members see it in real time.
+    //    Uses upsert on (itinerary_item_id, user_id) so re-voting updates
+    //    the existing row rather than creating a duplicate.
+    if (userId) {
+      void supabase
+        .from('votes')
+        .upsert(
+          { itinerary_item_id: activityId, user_id: userId, value },
+          { onConflict: 'itinerary_item_id,user_id' },
+        )
+        .then(({ error }) => {
+          if (error) {
+            console.warn('[Vote] Supabase upsert failed:', error.message);
+          }
+        });
+    }
+
+    // 3. After swipe exit animation, advance to next activity
     setTimeout(() => {
       if (idx + 1 >= ACTIVITIES.length) {
         router.replace('/all-voted');
