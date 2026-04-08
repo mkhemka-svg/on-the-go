@@ -13,12 +13,9 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, FontFamily } from '@/constants/theme';
+import { TUTORIAL_KEY, VOTING_BG_IMAGE } from '@/constants/votingConfig';
 
 const { width, height } = Dimensions.get('window');
-
-const TUTORIAL_KEY     = 'hasSeenVotingTutorial';
-const PLACEHOLDER_IMAGE =
-  'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=900&auto=format&fit=crop';
 
 // ── Vertical dashed line ──────────────────────────────────────
 
@@ -28,12 +25,13 @@ function VerticalDashedLine() {
   const count  = Math.ceil(height / (DASH_H + GAP_H));
 
   return (
-    <View
-      pointerEvents="none"
-      style={styles.dashedLineWrapper}
-    >
+    // pointerEvents in style — required in RN 0.76+ New Architecture
+    <View style={styles.dashedLineWrapper}>
       {Array.from({ length: count }, (_, i) => (
-        <View key={i} style={[styles.dash, i < count - 1 && { marginBottom: GAP_H }]} />
+        <View
+          key={i}
+          style={i < count - 1 ? [styles.dash, { marginBottom: GAP_H }] : styles.dash}
+        />
       ))}
     </View>
   );
@@ -44,7 +42,7 @@ function VerticalDashedLine() {
 export default function VotingTutorial1Page() {
   const router = useRouter();
 
-  // Skip tutorial if already seen
+  // Skip both tutorials if already seen
   useEffect(() => {
     AsyncStorage.getItem(TUTORIAL_KEY).then(value => {
       if (value === 'true') {
@@ -53,35 +51,30 @@ export default function VotingTutorial1Page() {
     });
   }, []);
 
-  const handleBack = () => {
-    router.back();
-  };
-
-  const handleAdvance = () => {
-    router.push('/vote-tutorial-2');
-  };
+  const handleBack    = () => router.back();
+  const handleAdvance = () => router.push('/vote-tutorial-2');
 
   return (
     <View style={styles.root}>
       {/* ── Full-screen background image ── */}
       <Image
-        source={{ uri: PLACEHOLDER_IMAGE }}
+        source={{ uri: VOTING_BG_IMAGE }}
         style={StyleSheet.absoluteFillObject}
         contentFit="cover"
         transition={0}
       />
 
-      {/* ── Dark dim overlay ── */}
-      <View style={styles.dimOverlay} pointerEvents="none" />
+      {/* ── Dark dim overlay — pointerEvents in style ── */}
+      <View style={styles.dimOverlay} />
 
       {/* ── Vertical dashed divider ── */}
       <VerticalDashedLine />
 
-      {/* ── Interactive content ── */}
+      {/* ── Interactive layer ── */}
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <Pressable style={styles.pressable} onPress={handleAdvance}>
 
-          {/* ── Back button (handles its own press, won't bubble) ── */}
+          {/* Back button handles its own touch — won't bubble to Pressable */}
           <TouchableOpacity
             style={styles.backButton}
             onPress={handleBack}
@@ -92,8 +85,8 @@ export default function VotingTutorial1Page() {
             </View>
           </TouchableOpacity>
 
-          {/* ── Center content ── */}
-          <View style={styles.centerContent} pointerEvents="none">
+          {/* Center content — pointerEvents:'none' in style so touches pass to Pressable */}
+          <View style={styles.centerContent}>
 
             {/* Activity name */}
             <View style={styles.activityNameCard}>
@@ -102,35 +95,27 @@ export default function VotingTutorial1Page() {
 
             <View style={styles.dividerSpacer} />
 
-            {/* Left / Right tutorial panels */}
-            <View style={styles.panelsRow} pointerEvents="none">
+            {/* Left / Right panels */}
+            <View style={styles.panelsRow}>
 
               {/* LEFT — dislike */}
               <View style={styles.panel}>
-                <Ionicons
-                  name="close-circle"
-                  size={width * 0.18}
-                  color={Colors.red}
-                />
+                <Ionicons name="close-circle"    size={width * 0.18} color={Colors.red} />
                 <View style={styles.arrowRow}>
                   <Ionicons name="arrow-back" size={width * 0.08} color="rgba(255,255,255,0.9)" />
-                  <Ionicons name="arrow-back" size={width * 0.08} color="rgba(255,255,255,0.55)" />
+                  <Ionicons name="arrow-back" size={width * 0.08} color="rgba(255,255,255,0.45)" />
                 </View>
                 <Text style={styles.swipeLabel}>Left to dislike</Text>
               </View>
 
-              {/* Center gap — dashed line is the absolute overlay */}
+              {/* Gap where the dashed line sits */}
               <View style={{ width: width * 0.08 }} />
 
               {/* RIGHT — like */}
               <View style={styles.panel}>
-                <Ionicons
-                  name="checkmark-circle"
-                  size={width * 0.18}
-                  color={Colors.green}
-                />
+                <Ionicons name="checkmark-circle" size={width * 0.18} color={Colors.green} />
                 <View style={styles.arrowRow}>
-                  <Ionicons name="arrow-forward" size={width * 0.08} color="rgba(255,255,255,0.55)" />
+                  <Ionicons name="arrow-forward" size={width * 0.08} color="rgba(255,255,255,0.45)" />
                   <Ionicons name="arrow-forward" size={width * 0.08} color="rgba(255,255,255,0.9)" />
                 </View>
                 <Text style={styles.swipeLabel}>Right to like</Text>
@@ -138,8 +123,8 @@ export default function VotingTutorial1Page() {
             </View>
           </View>
 
-          {/* ── Bottom hint ── */}
-          <View style={styles.tapHintRow} pointerEvents="none">
+          {/* Bottom hint */}
+          <View style={styles.tapHintRow}>
             <Text style={styles.tapHint}>Tap anywhere to continue</Text>
             <Ionicons name="arrow-forward" size={14} color="rgba(255,255,255,0.65)" style={{ marginLeft: 4 }} />
           </View>
@@ -158,6 +143,7 @@ const styles = StyleSheet.create({
   dimOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.55)',
+    pointerEvents: 'none',      // ← style prop, not View prop (RN 0.76+)
   },
 
   // ── Dashed line ──
@@ -169,18 +155,17 @@ const styles = StyleSheet.create({
     height,
     alignItems: 'center',
     overflow: 'hidden',
+    pointerEvents: 'none',      // ← style prop
   },
   dash: {
     width: 2,
     height: 12,
-    backgroundColor: 'rgba(255,255,255,0.55)',
+    backgroundColor: 'rgba(255,255,255,0.5)',
     borderRadius: 1,
   },
 
   // ── Layout ──
-  safeArea: {
-    flex: 1,
-  },
+  safeArea: { flex: 1 },
   pressable: {
     flex: 1,
     justifyContent: 'space-between',
@@ -208,6 +193,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: width * 0.04,
+    pointerEvents: 'none',      // ← style prop — touches pass through to Pressable
   },
   activityNameCard: {
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -224,16 +210,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 0.5,
   },
-  dividerSpacer: {
-    height: height * 0.06,
-  },
+  dividerSpacer: { height: height * 0.06 },
 
-  // ── Panels row ──
+  // ── Panels ──
   panelsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
+    pointerEvents: 'none',      // ← style prop
   },
   panel: {
     flex: 1,
@@ -261,11 +246,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingBottom: height * 0.035,
+    pointerEvents: 'none',      // ← style prop
   },
   tapHint: {
     fontFamily: FontFamily.merriweather,
     fontSize: width * 0.032,
     color: 'rgba(255,255,255,0.65)',
-    textAlign: 'center',
   },
 });

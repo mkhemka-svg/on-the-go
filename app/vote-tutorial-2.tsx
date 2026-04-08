@@ -12,47 +12,41 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, FontFamily } from '@/constants/theme';
+import { TUTORIAL_KEY, VOTING_BG_IMAGE } from '@/constants/votingConfig';
 
 const { width, height } = Dimensions.get('window');
-
-const TUTORIAL_KEY      = 'hasSeenVotingTutorial';
-const PLACEHOLDER_IMAGE =
-  'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=900&auto=format&fit=crop';
 
 // ── Main Screen ───────────────────────────────────────────────
 
 export default function VotingTutorial2Page() {
   const router = useRouter();
 
-  const handleBack = () => {
-    router.back();                     // → VotingTutorial1Page
-  };
+  const handleBack = () => router.back();   // → VotingTutorial1Page
 
   const handleAdvance = async () => {
-    // Mark tutorial as completed — both screens are now skipped forever
+    // Mark both tutorials as seen — never shown again
     await AsyncStorage.setItem(TUTORIAL_KEY, 'true');
-    router.replace('/vote');           // → VoteOnActivityPage
+    router.replace('/vote');                // → VoteOnActivityPage
   };
 
   return (
     <View style={styles.root}>
-
-      {/* ── Full-screen background image (same as Tutorial 1) ── */}
+      {/* ── Full-screen background (same image as Tutorial 1) ── */}
       <Image
-        source={{ uri: PLACEHOLDER_IMAGE }}
+        source={{ uri: VOTING_BG_IMAGE }}
         style={StyleSheet.absoluteFillObject}
         contentFit="cover"
         transition={0}
       />
 
       {/* ── Dark dim overlay ── */}
-      <View style={styles.dimOverlay} pointerEvents="none" />
+      <View style={styles.dimOverlay} />
 
-      {/* ── Interactive content ── */}
+      {/* ── Interactive layer ── */}
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <Pressable style={styles.pressable} onPress={handleAdvance}>
 
-          {/* ── Back button ── */}
+          {/* Back button — handles its own touch, won't bubble */}
           <TouchableOpacity
             style={styles.backButton}
             onPress={handleBack}
@@ -63,8 +57,8 @@ export default function VotingTutorial2Page() {
             </View>
           </TouchableOpacity>
 
-          {/* ── Center content ── */}
-          <View style={styles.centerContent} pointerEvents="none">
+          {/* Center content — pointerEvents:'none' so touches reach the Pressable */}
+          <View style={styles.centerContent}>
 
             {/* Activity name pill */}
             <View style={styles.activityNameCard}>
@@ -75,40 +69,22 @@ export default function VotingTutorial2Page() {
 
             {/* Swipe-up instruction */}
             <View style={styles.swipeUpBlock}>
-
-              {/* Label sits above the arrows */}
+              {/* Label above the arrows */}
               <Text style={styles.swipeLabel}>Up to skip</Text>
 
+              {/* Three stacked arrows — top is brightest (destination of swipe) */}
               <View style={styles.upArrowStack}>
-                {/* Brightest at top — shows destination of the upward swipe */}
-                <Ionicons
-                  name="arrow-up"
-                  size={width * 0.13}
-                  color="rgba(255,255,255,0.95)"
-                />
-                <Ionicons
-                  name="arrow-up"
-                  size={width * 0.13}
-                  color="rgba(255,255,255,0.55)"
-                />
-                <Ionicons
-                  name="arrow-up"
-                  size={width * 0.13}
-                  color="rgba(255,255,255,0.2)"
-                />
+                <Ionicons name="arrow-up" size={width * 0.13} color="rgba(255,255,255,0.95)" />
+                <Ionicons name="arrow-up" size={width * 0.13} color="rgba(255,255,255,0.5)"  />
+                <Ionicons name="arrow-up" size={width * 0.13} color="rgba(255,255,255,0.18)" />
               </View>
             </View>
           </View>
 
-          {/* ── Bottom hint ── */}
-          <View style={styles.tapHintRow} pointerEvents="none">
+          {/* Bottom hint — different copy so user knows this is the last step */}
+          <View style={styles.tapHintRow}>
             <Text style={styles.tapHint}>Tap to start voting</Text>
-            <Ionicons
-              name="arrow-forward"
-              size={14}
-              color="rgba(255,255,255,0.65)"
-              style={{ marginLeft: 4 }}
-            />
+            <Ionicons name="arrow-forward" size={14} color="rgba(255,255,255,0.65)" style={{ marginLeft: 4 }} />
           </View>
 
         </Pressable>
@@ -125,6 +101,7 @@ const styles = StyleSheet.create({
   dimOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.55)',
+    pointerEvents: 'none',
   },
 
   // ── Layout ──
@@ -156,6 +133,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: width * 0.08,
+    pointerEvents: 'none',
   },
   activityNameCard: {
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -172,14 +150,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 0.5,
   },
-  dividerSpacer: {
-    height: height * 0.07,
-  },
+  dividerSpacer: { height: height * 0.07 },
 
   // ── Swipe-up instruction ──
   swipeUpBlock: {
     alignItems: 'center',
-    gap: height * 0.018,
+    gap: height * 0.022,
   },
   swipeLabel: {
     fontFamily: FontFamily.merriweatherBold,
@@ -193,7 +169,6 @@ const styles = StyleSheet.create({
   },
   upArrowStack: {
     alignItems: 'center',
-    gap: -(height * 0.012),   // negative gap so arrows overlap slightly, reinforcing motion
   },
 
   // ── Bottom hint ──
@@ -202,11 +177,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingBottom: height * 0.035,
+    pointerEvents: 'none',
   },
   tapHint: {
     fontFamily: FontFamily.merriweather,
     fontSize: width * 0.032,
     color: 'rgba(255,255,255,0.65)',
-    textAlign: 'center',
   },
 });
