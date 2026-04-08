@@ -23,73 +23,25 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, FontFamily, Radius } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
+import { loadItems, itemToActivity, Activity } from '@/constants/itineraryStore';
 
 const { width, height } = Dimensions.get('window');
 
 type VoteValue = 'like' | 'dislike' | 'skip';
 
-interface Activity {
-  id: string;
-  title: string;
-  description: string;
-  imageUrl: string;
-}
-
-// ── Hardcoded activities matching ItineraryItemsList ─────────
-// Supabase will supply these filtered by tripId later
-const ACTIVITIES: Activity[] = [
-  {
-    id: '1',
-    title: 'F1 Arcade',
-    description:
-      'High-octane racing simulator experience. Multiple full-motion F1 simulators, mini-games, and competitive race leaderboards. Perfect for groups.',
-    imageUrl:
-      'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=900&auto=format&fit=crop',
-  },
-  {
-    id: '2',
-    title: 'Dinner at Strega',
-    description:
-      'Upscale Italian cuisine in the North End. Known for handmade pasta, signature cocktails, and a chic ambiance. Reservations recommended.',
-    imageUrl:
-      'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=900&auto=format&fit=crop',
-  },
-  {
-    id: '3',
-    title: 'Duck Tour',
-    description:
-      'Iconic Boston Duck Tour on an amphibious vehicle. Rolls through the historic city streets before splashing into the Charles River.',
-    imageUrl:
-      'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=900&auto=format&fit=crop',
-  },
-  {
-    id: '4',
-    title: 'Fenway Park Visit',
-    description:
-      'America\'s most beloved ballpark since 1912. Take a behind-the-scenes tour or catch a Red Sox game. The Green Monster awaits.',
-    imageUrl:
-      'https://images.unsplash.com/photo-1583422409516-2895a77efded?w=900&auto=format&fit=crop',
-  },
-  {
-    id: '5',
-    title: 'Rooftop Bar Night',
-    description:
-      'Drinks and panoramic city views at Lookout Rooftop & Bar. Craft cocktails, small plates, and Boston\'s best skyline after dark. 21+ only.',
-    imageUrl:
-      'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=900&auto=format&fit=crop',
-  },
-];
-
-const SWIPE_H      = width  * 0.3;    // horizontal swipe threshold to commit
-const SWIPE_V      = height * 0.22;   // vertical (up) swipe threshold to commit
-const CARD_COLL_H  = height * 0.19;   // collapsed card height
-const CARD_EXP_H   = height * 0.5;    // expanded card height
+const SWIPE_H     = width  * 0.3;
+const SWIPE_V     = height * 0.22;
+const CARD_COLL_H = height * 0.19;
+const CARD_EXP_H  = height * 0.5;
 
 // ── Main Screen ───────────────────────────────────────────────
 
 export default function VoteOnActivityPage() {
   const router  = useRouter();
   const insets  = useSafeAreaInsets();
+
+  // ── Activities loaded from the shared itinerary store ────────
+  const [activities, setActivities] = useState<Activity[]>([]);
 
   // currentIndexRef keeps latest index accessible from runOnJS callbacks
   const currentIndexRef = useRef(0);
@@ -100,6 +52,9 @@ export default function VoteOnActivityPage() {
   const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    // Load activities from the same store itinerary.tsx writes to
+    loadItems().then(items => setActivities(items.map(itemToActivity)));
+    // Load user id for Supabase vote writes
     supabase.auth.getSession().then(({ data }) => {
       userIdRef.current = data.session?.user.id ?? null;
     });
@@ -130,8 +85,9 @@ export default function VoteOnActivityPage() {
   // ── Vote handler (JS thread, called via runOnJS) ─────────────
   const handleVote = useCallback((value: VoteValue) => {
     const idx        = currentIndexRef.current;
-    const activityId = ACTIVITIES[idx].id;
+    const activityId = activities[idx]?.id;
     const userId     = userIdRef.current;
+    if (!activityId) return;
 
     // 1. Write to AsyncStorage immediately (local cache / offline fallback)
     void AsyncStorage.getItem('votes').then(stored => {
@@ -159,7 +115,7 @@ export default function VoteOnActivityPage() {
 
     // 3. After swipe exit animation, advance to next activity
     setTimeout(() => {
-      if (idx + 1 >= ACTIVITIES.length) {
+      if (idx + 1 >= activities.length) {
         router.replace('/all-voted');
         return;
       }
@@ -171,7 +127,7 @@ export default function VoteOnActivityPage() {
       translateX.value = 0;
       translateY.value = 0;
     }, 320);
-  }, [router]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [router, activities]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Pan gesture ──────────────────────────────────────────────
   const panGesture = useMemo(
@@ -220,7 +176,10 @@ export default function VoteOnActivityPage() {
     opacity: Math.max(0, Math.min(1, -translateX.value / (SWIPE_H * 0.6))),
   }));
 
-  const activity = ACTIVITIES[displayIndex];
+  const activity = activities[displayIndex];
+
+  // Don't render until activities are loaded
+  if (!activity) return null;
 
   return (
     <View style={styles.root}>
@@ -302,7 +261,7 @@ export default function VoteOnActivityPage() {
 
         {/* Progress dots */}
         <View style={styles.progressDots}>
-          {ACTIVITIES.map((_, i) => (
+          {activities.map((_, i) => (
             <View
               key={i}
               style={[

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,48 +21,10 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors, FontFamily, Radius } from '@/constants/theme';
 import BottomNavigationBar from '@/components/BottomNavigationBar';
 import ItineraryItemCard, { ItineraryItem } from '@/components/ItineraryItemCard';
+import { INITIAL_ITEMS, loadItems, saveItems } from '@/constants/itineraryStore';
 
 const { width, height } = Dimensions.get('window');
 const H_PADDING = width * 0.06;
-
-// ── Hardcoded placeholder items ──────────────────────────────
-const INITIAL_ITEMS: ItineraryItem[] = [
-  {
-    id: '1',
-    title: 'F1 Arcade',
-    description: 'Racing simulator experience. Multiple simulators available — book a bay ahead for weekends.',
-    scheduledDate: '4/15',
-    scheduledTime: '1:00 pm',
-  },
-  {
-    id: '2',
-    title: 'Dinner at Strega',
-    description: 'Upscale Italian restaurant in the North End. Known for the pasta and ambiance. Make a reservation.',
-    scheduledDate: '4/15',
-    scheduledTime: '7:30 pm',
-  },
-  {
-    id: '3',
-    title: 'Duck Tour',
-    description: 'Boston Duck Tour — land and water sightseeing experience through the city.',
-    scheduledDate: '4/16',
-    scheduledTime: '10:00 am',
-  },
-  {
-    id: '4',
-    title: 'Fenway Park Visit',
-    description: 'Guided tour of the historic ballpark. Check the Red Sox schedule for a game option.',
-    scheduledDate: '4/16',
-    scheduledTime: '2:00 pm',
-  },
-  {
-    id: '5',
-    title: 'Rooftop Bar Night',
-    description: 'Drinks and panoramic city views at Lookout Rooftop & Bar. 21+ only.',
-    scheduledDate: '4/17',
-    scheduledTime: '8:00 pm',
-  },
-];
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -86,6 +48,11 @@ function formatScheduledDate(d: Date): string {
 
 export default function ItineraryPage() {
   const [items, setItems]                       = useState<ItineraryItem[]>(INITIAL_ITEMS);
+
+  // Load persisted items from AsyncStorage on mount
+  useEffect(() => {
+    loadItems().then(setItems);
+  }, []);
   const [expandedId, setExpandedId]             = useState<string | null>(null);
   const [dropdownVisible, setDropdownVisible]   = useState(false);
   const [addModalVisible, setAddModalVisible]   = useState(false);
@@ -190,7 +157,9 @@ export default function ItineraryPage() {
       scheduledDate: formatScheduledDate(formDate),
       scheduledTime: formatTime(formTime),
     };
-    setItems(prev => [...prev, newItem]);
+    const updated = [...items, newItem];
+    setItems(updated);
+    void saveItems(updated);   // persist so vote screen picks it up
     setAddModalVisible(false);
   };
 
