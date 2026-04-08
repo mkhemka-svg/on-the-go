@@ -87,6 +87,7 @@ export default function InviteMoreCrewPage() {
           {/* Profile avatar icon */}
           <TouchableOpacity
             style={styles.avatarBtn}
+            onPress={() => router.push('/profile')}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             <View style={styles.avatarCircle}>

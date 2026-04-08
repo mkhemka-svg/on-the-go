@@ -50,6 +50,8 @@ export default function RootLayout() {
         <Stack.Screen name="calendar" />
         <Stack.Screen name="calendar-day" />
         <Stack.Screen name="invite" />
+        <Stack.Screen name="profile" />
+        <Stack.Screen name="past-trips" />
         <Stack.Screen name="(onboarding)" />
         <Stack.Screen name="(tabs)" />
       </Stack>
