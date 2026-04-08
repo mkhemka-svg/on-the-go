@@ -95,7 +95,11 @@ export default function ItineraryPage() {
   const [formDescription, setFormDescription]   = useState('');
   const [formDate, setFormDate]                 = useState(new Date());
   const [formTime, setFormTime]                 = useState(new Date());
+  const [dateSelected, setDateSelected]         = useState(false);
+  const [timeSelected, setTimeSelected]         = useState(false);
   const [formTitleError, setFormTitleError]     = useState('');
+  const [formDateError, setFormDateError]       = useState('');
+  const [formTimeError, setFormTimeError]       = useState('');
   const [showDatePicker, setShowDatePicker]     = useState(false);
   const [showTimePicker, setShowTimePicker]     = useState(false);
   const [pendingDate, setPendingDate]           = useState(new Date());
@@ -150,7 +154,11 @@ export default function ItineraryPage() {
     setFormDescription('');
     setFormDate(now);
     setFormTime(now);
+    setDateSelected(false);
+    setTimeSelected(false);
     setFormTitleError('');
+    setFormDateError('');
+    setFormTimeError('');
     setShowDatePicker(false);
     setShowTimePicker(false);
     setPendingDate(now);
@@ -160,10 +168,21 @@ export default function ItineraryPage() {
 
   // ── Save item ──────────────────────────────────────────────
   const handleSaveItem = () => {
+    let hasError = false;
     if (!formTitle.trim()) {
       setFormTitleError('Activity title is required.');
-      return;
+      hasError = true;
     }
+    if (!dateSelected) {
+      setFormDateError('Date is required.');
+      hasError = true;
+    }
+    if (!timeSelected) {
+      setFormTimeError('Time is required.');
+      hasError = true;
+    }
+    if (hasError) return;
+
     const newItem: ItineraryItem = {
       id: String(Date.now()),
       title: formTitle.trim(),
@@ -265,7 +284,7 @@ export default function ItineraryPage() {
             <Text style={styles.fieldLabel}>Activity Title *</Text>
             <TextInput
               style={[styles.fieldInput, !!formTitleError && styles.fieldInputError]}
-              placeholder="e.g. F1 Arcade"
+              placeholder="e.g., Visit the local market"
               placeholderTextColor={Colors.lightGray}
               value={formTitle}
               onChangeText={text => { setFormTitle(text); setFormTitleError(''); }}
@@ -276,7 +295,7 @@ export default function ItineraryPage() {
             <Text style={styles.fieldLabel}>Description</Text>
             <TextInput
               style={[styles.fieldInput, styles.fieldInputMulti]}
-              placeholder="Add notes or details..."
+              placeholder="e.g., It is a year-round, indoor marketplace..."
               placeholderTextColor={Colors.lightGray}
               value={formDescription}
               onChangeText={setFormDescription}
@@ -285,25 +304,31 @@ export default function ItineraryPage() {
               textAlignVertical="top"
             />
 
-            <Text style={styles.fieldLabel}>Date</Text>
+            <Text style={styles.fieldLabel}>Date *</Text>
             <TouchableOpacity
-              style={styles.dateField}
+              style={[styles.dateField, !!formDateError && styles.fieldInputError]}
               onPress={() => { setPendingDate(formDate); setShowDatePicker(true); }}
               activeOpacity={0.8}
             >
-              <Ionicons name="calendar-outline" size={16} color={Colors.darkNavy} />
-              <Text style={styles.dateFieldText}>{formatDate(formDate)}</Text>
+              <Ionicons name="calendar-outline" size={16} color={dateSelected ? Colors.darkNavy : Colors.lightGray} />
+              <Text style={dateSelected ? styles.dateFieldText : styles.dateFieldPlaceholder}>
+                {dateSelected ? formatDate(formDate) : 'Select date'}
+              </Text>
             </TouchableOpacity>
+            {!!formDateError && <Text style={styles.fieldError}>{formDateError}</Text>}
 
-            <Text style={styles.fieldLabel}>Time</Text>
+            <Text style={styles.fieldLabel}>Time *</Text>
             <TouchableOpacity
-              style={styles.dateField}
+              style={[styles.dateField, !!formTimeError && styles.fieldInputError]}
               onPress={() => { setPendingTime(formTime); setShowTimePicker(true); }}
               activeOpacity={0.8}
             >
-              <Ionicons name="time-outline" size={16} color={Colors.darkNavy} />
-              <Text style={styles.dateFieldText}>{formatTime(formTime)}</Text>
+              <Ionicons name="time-outline" size={16} color={timeSelected ? Colors.darkNavy : Colors.lightGray} />
+              <Text style={timeSelected ? styles.dateFieldText : styles.dateFieldPlaceholder}>
+                {timeSelected ? formatTime(formTime) : '--:-- --'}
+              </Text>
             </TouchableOpacity>
+            {!!formTimeError && <Text style={styles.fieldError}>{formTimeError}</Text>}
 
             <View style={styles.formButtonRow}>
               <TouchableOpacity
@@ -341,7 +366,7 @@ export default function ItineraryPage() {
                 <TouchableOpacity onPress={() => setShowDatePicker(false)}>
                   <Text style={styles.pickerCancel}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => { setFormDate(pendingDate); setShowDatePicker(false); }}>
+                <TouchableOpacity onPress={() => { setFormDate(pendingDate); setDateSelected(true); setFormDateError(''); setShowDatePicker(false); }}>
                   <Text style={styles.pickerDone}>Done</Text>
                 </TouchableOpacity>
               </View>
@@ -366,7 +391,7 @@ export default function ItineraryPage() {
                 <TouchableOpacity onPress={() => setShowTimePicker(false)}>
                   <Text style={styles.pickerCancel}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => { setFormTime(pendingTime); setShowTimePicker(false); }}>
+                <TouchableOpacity onPress={() => { setFormTime(pendingTime); setTimeSelected(true); setFormTimeError(''); setShowTimePicker(false); }}>
                   <Text style={styles.pickerDone}>Done</Text>
                 </TouchableOpacity>
               </View>
@@ -584,6 +609,11 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.merriweather,
     fontSize: width * 0.036,
     color: Colors.darkNavy,
+  },
+  dateFieldPlaceholder: {
+    fontFamily: FontFamily.merriweather,
+    fontSize: width * 0.036,
+    color: Colors.lightGray,
   },
   formButtonRow: {
     flexDirection: 'row',

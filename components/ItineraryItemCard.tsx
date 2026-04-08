@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Animated } from 'react-native';
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontFamily, Radius } from '@/constants/theme';
 
@@ -22,14 +22,14 @@ interface Props {
 export default function ItineraryItemCard({ item, isExpanded, onToggle }: Props) {
   const rotation = useRef(new Animated.Value(isExpanded ? 1 : 0)).current;
 
-  const handlePress = () => {
+  // Sync chevron animation whenever parent changes isExpanded
+  useEffect(() => {
     Animated.timing(rotation, {
-      toValue: isExpanded ? 0 : 1,
+      toValue: isExpanded ? 1 : 0,
       duration: 200,
       useNativeDriver: true,
     }).start();
-    onToggle(item.id);
-  };
+  }, [isExpanded]);
 
   const chevronRotation = rotation.interpolate({
     inputRange: [0, 1],
@@ -39,7 +39,7 @@ export default function ItineraryItemCard({ item, isExpanded, onToggle }: Props)
   return (
     <TouchableOpacity
       style={styles.card}
-      onPress={handlePress}
+      onPress={() => onToggle(item.id)}
       activeOpacity={0.8}
     >
       {/* ── Collapsed row: title + chevron ── */}
