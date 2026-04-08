@@ -44,6 +44,7 @@ export default function RootLayout() {
         <Stack.Screen name="itinerary" />
         <Stack.Screen name="vote" />
         <Stack.Screen name="calendar" />
+        <Stack.Screen name="calendar-day" />
         <Stack.Screen name="invite" />
         <Stack.Screen name="(onboarding)" />
         <Stack.Screen name="(tabs)" />
