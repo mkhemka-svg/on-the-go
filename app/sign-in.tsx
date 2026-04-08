@@ -43,6 +43,15 @@ export default function SignInOrSignUpPage() {
     const trimmed = email.trim().toLowerCase();
     if (!trimmed) return;
 
+    // Dev bypass: skip auth when Supabase is not yet configured
+    const supabaseConfigured =
+      process.env.EXPO_PUBLIC_SUPABASE_URL &&
+      process.env.EXPO_PUBLIC_SUPABASE_URL !== 'https://placeholder.supabase.co';
+    if (!supabaseConfigured) {
+      router.replace('/choose-trip');
+      return;
+    }
+
     setEmailLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOtp({
@@ -66,6 +75,13 @@ export default function SignInOrSignUpPage() {
   //   Authentication → Providers → Google → enable, add Client ID & Secret
   //   Add redirect URL: onthego://auth/callback
   const handleGoogleSignIn = async () => {
+    const supabaseConfigured =
+      process.env.EXPO_PUBLIC_SUPABASE_URL &&
+      process.env.EXPO_PUBLIC_SUPABASE_URL !== 'https://placeholder.supabase.co';
+    if (!supabaseConfigured) {
+      router.replace('/choose-trip');
+      return;
+    }
     setGoogleLoading(true);
     try {
       const redirectTo = makeRedirectUri({ scheme: 'onthego', path: 'auth/callback' });
@@ -101,6 +117,13 @@ export default function SignInOrSignUpPage() {
   // Setup required in Supabase Dashboard:
   //   Authentication → Providers → Apple → enable, add Service ID, team ID, key ID & private key
   const handleAppleSignIn = async () => {
+    const supabaseConfigured =
+      process.env.EXPO_PUBLIC_SUPABASE_URL &&
+      process.env.EXPO_PUBLIC_SUPABASE_URL !== 'https://placeholder.supabase.co';
+    if (!supabaseConfigured) {
+      router.replace('/choose-trip');
+      return;
+    }
     setAppleLoading(true);
     try {
       const credential = await AppleAuthentication.signInAsync({
