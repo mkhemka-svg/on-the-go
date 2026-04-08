@@ -36,7 +36,7 @@ const TABS: TabConfig[] = [
     label: 'Voting',
     icon: 'thumbs-up-outline',
     iconActive: 'thumbs-up',
-    route: '/vote',
+    route: '/vote-tutorial-1',
   },
   {
     name: 'calendar',

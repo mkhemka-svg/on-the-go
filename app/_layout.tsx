@@ -43,6 +43,8 @@ export default function RootLayout() {
         <Stack.Screen name="saved-trips" />
         <Stack.Screen name="itinerary" />
         <Stack.Screen name="vote" />
+        <Stack.Screen name="vote-tutorial-1" />
+        <Stack.Screen name="vote-tutorial-2" />
         <Stack.Screen name="calendar" />
         <Stack.Screen name="calendar-day" />
         <Stack.Screen name="invite" />
