@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Colors, FontFamily } from '@/constants/theme';
 import AirplaneWindowIllustration from '@/components/illustrations/AirplaneWindowIllustration';
+import { supabase } from '@/lib/supabase';
 
 const { width, height } = Dimensions.get('window');
 
@@ -11,14 +12,35 @@ export default function LoadingPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // TODO: replace with real Supabase session check once auth is wired up.
-    // If session exists → router.replace('/choose-trip')
-    // If no session → router.replace('/sign-in')
-    const timer = setTimeout(() => {
-      router.replace('/sign-in');
-    }, 2500);
+    // Show the splash for a minimum of 1.5s, then resolve the session.
+    // onAuthStateChange fires immediately with the persisted session (or null).
+    let resolved = false;
+    let timerDone = false;
+    let destination: '/choose-trip' | '/sign-in' = '/sign-in';
 
-    return () => clearTimeout(timer);
+    const navigate = () => {
+      router.replace(destination);
+    };
+
+    // Minimum splash duration
+    const timer = setTimeout(() => {
+      timerDone = true;
+      if (resolved) navigate();
+    }, 1500);
+
+    // Check persisted session — fires synchronously on first call if session is cached
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      destination = session ? '/choose-trip' : '/sign-in';
+      resolved = true;
+      if (timerDone) navigate();
+      // Unsubscribe after first event — we only need the initial state
+      subscription.unsubscribe();
+    });
+
+    return () => {
+      clearTimeout(timer);
+      subscription.unsubscribe();
+    };
   }, [router]);
 
   return (
