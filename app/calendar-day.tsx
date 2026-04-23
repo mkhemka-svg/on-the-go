@@ -170,12 +170,16 @@ export default function CalendarDayPage() {
   // ── Build gesture for a single activity ──────────────────────
 
   const makeGesture = (activity: Activity) => {
+    // Pre-compute as a plain number — worklet closures can capture primitives
+    // but cannot call regular JS functions like blockHeight().
+    const bh = blockHeight(activity);
+
     const longPress = Gesture.LongPress()
       .minDuration(400)
       .maxDistance(999)   // don't cancel on movement
       .onStart((e) => {
         dragX.value       = e.absoluteX - COL_W / 2;
-        dragY.value       = e.absoluteY - blockHeight(activity) / 2;
+        dragY.value       = e.absoluteY - bh / 2;
         dragOpacity.value = withTiming(1, { duration: 120 });
         runOnJS(onDragStart)(activity);
       });
@@ -184,7 +188,7 @@ export default function CalendarDayPage() {
       .activateAfterLongPress(400)
       .onChange((e) => {
         dragX.value = e.absoluteX - COL_W / 2;
-        dragY.value = e.absoluteY - blockHeight(activity) / 2;
+        dragY.value = e.absoluteY - bh / 2;
         runOnJS(onDragMove)(e.absoluteX);
       })
       .onEnd((e) => {
