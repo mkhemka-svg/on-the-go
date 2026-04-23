@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,13 +13,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontFamily, Radius } from '@/constants/theme';
 import BottomNavigationBar from '@/components/BottomNavigationBar';
 import { supabase } from '@/lib/supabase';
+import { loadTrips } from '@/constants/tripStore';
 
 const { width, height } = Dimensions.get('window');
 
-// ── Hardcoded placeholders — replace with Supabase auth data later ──
-const USER_NAME    = 'Lily';
-const TRIPS_TAKEN  = 3;
-const HOURS_SAVED  = 85;
+// hours saved is derived: no DB column exists yet
+const HOURS_PER_TRIP = 28;
 
 // ── Settings items config ─────────────────────────────────────
 
@@ -122,6 +122,44 @@ const menuStyles = StyleSheet.create({
 export default function ProfilePage() {
   const router = useRouter();
 
+  const [userName,    setUserName]    = useState('');
+  const [tripsTaken,  setTripsTaken]  = useState(0);
+
+  useEffect(() => {
+    async function loadProfile() {
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+      const isConfigured = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co';
+
+      if (isConfigured) {
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user.id;
+
+        if (userId) {
+          // Name from profiles table
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('name')
+            .eq('id', userId)
+            .single();
+          if (profile?.name) setUserName(profile.name);
+
+          // Trip count from trip_members
+          const { count } = await supabase
+            .from('trip_members')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', userId);
+          if (count !== null) { setTripsTaken(count); return; }
+        }
+      }
+
+      // Fallback: local AsyncStorage trip list
+      const localTrips = await loadTrips();
+      setTripsTaken(localTrips.length);
+    }
+
+    void loadProfile();
+  }, []);
+
   const SETTINGS_ITEMS: SettingsItem[] = [
     {
       key: 'account',
@@ -194,7 +232,7 @@ export default function ProfilePage() {
           </View>
 
           {/* Name */}
-          <Text style={styles.userName}>{USER_NAME}</Text>
+          <Text style={styles.userName}>{userName || '—'}</Text>
 
           {/* Divider */}
           <View style={styles.statsDivider} />
@@ -202,12 +240,12 @@ export default function ProfilePage() {
           {/* Stats row */}
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{TRIPS_TAKEN}</Text>
+              <Text style={styles.statNumber}>{tripsTaken}</Text>
               <Text style={styles.statLabel}>trips taken</Text>
             </View>
             <View style={styles.statsVerticalDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{HOURS_SAVED}</Text>
+              <Text style={styles.statNumber}>{tripsTaken * HOURS_PER_TRIP}</Text>
               <Text style={styles.statLabel}>hours saved</Text>
             </View>
           </View>
