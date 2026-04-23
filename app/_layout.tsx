@@ -18,6 +18,7 @@ import { registerForPushNotifications } from '@/constants/notifications';
 // Must be imported at top level so TaskManager.defineTask calls run on every launch
 import '@/constants/backgroundTasks';
 import { registerBackgroundTasks } from '@/constants/backgroundTasks';
+import { startRealtimeSync } from '@/lib/realtimeSync';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -44,6 +45,7 @@ export default function RootLayout() {
   useEffect(() => {
     void registerForPushNotifications();
     void registerBackgroundTasks();
+    const stopSync = startRealtimeSync();
 
     notifListenerRef.current = Notifications.addNotificationReceivedListener(() => {
       // Notification arrived while app is foregrounded — handler in
@@ -55,6 +57,7 @@ export default function RootLayout() {
     });
 
     return () => {
+      stopSync();
       notifListenerRef.current?.remove();
       notifResponseRef.current?.remove();
     };

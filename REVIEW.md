@@ -223,7 +223,7 @@ Reviewed against SPEC-2.md. Each finding is marked [PASS], [FAIL], or [WARN].
 
 **12.2** [FAIL] `expo-task-manager` and `expo-background-fetch` are not present in `package.json`. No background tasks for trip code expiry, vote tallying, or calendar sync are implemented.
 
-**12.3** [FAIL] No Supabase Realtime listeners for background sync of votes, itinerary changes, or new member joins.
+**12.3** [PASS] `lib/realtimeSync.ts` opens three `postgres_changes` channels on sign-in: `votes` (merges remote vote rows into AsyncStorage), `itinerary_items` (applies INSERT/UPDATE/DELETE to local cache), `trip_members` (fires a local notification when someone else joins). Channels are torn down on sign-out and restarted on token refresh. `startRealtimeSync()` is called from `_layout.tsx` and no-ops when Supabase is not configured.
 
 ---
 
