@@ -4,7 +4,7 @@
 * Figma for high-fidelity prototyping
 
 
-Prompts I asked Claude:
+Some of the Prompts I asked Claude:
 1. "to build my mobile app, i have made high-fidelity wireframes using figma. now i want to build the frontend of my app using claude code. do i need label the components of each page in the figma as "buttons", "cards" or "fields" for claude code to be able to actually code my app. also how do i share the figma file with claude code for it to build the app"
 2. "does the figma prototype need to fit to an iphone screen"
 3. "we have made all our frames for iphone 13 mini by mistake. we want the app to display correctly on all iphone sizes. what do we do"
@@ -37,13 +37,13 @@ Prompts I asked Claude:
 30. "kind of but it didnt get the logo. this is my second frame: [Figma link]"
 31. "sort of. the Supabase credentials aren't configured"
 32. "fix this: `past-trips.tsx` is a placeholder screen showing 'Memory Lane – Past trips coming soon.' The spec requires it to show past trips browsable by the user (same as `YourSavedTripsPage`)."
-33. "theres no way for me to delete a trip from saved trips."
+33. "theres no way for me to delete a trip from saved trips. fix this"
 34. "why does the profile name erase when i reload the app but the profile picture does not. make sure both don't reset"
 35. "after the authentication, in the screen where you can choose between creating a new trip and viewing your saved trips, the profile name and profile picture shoudld be allowed to be changed and should be connected to the profile name and picture in the profile page. make sure both profile page and this page have the same values essentially"
 36. "fix this: Tapping any settings row (Account Settings, Get Help, View Profile, Privacy) does nothing — `onPress: () => {}` for all four. — `app/profile.tsx:131`, `137`, `143`, `149`"
 37. "alsp remove the 'view profile' button since it doesn't serve a purpose"
 38. "when you press the 'read policy' button after pressing 'privacy', it leads me to a 'not found' page in safari. change that to an openable and acccessible document so theres no error and i dont have to pay for a domain for a website"
-39. "he Voting tab in `BottomNavigationBar` always navigates to `/vote-tutorial-1` (`components/BottomNavigationBar.tsx:39`). After a user has seen the tutorial, pressing the Voting tab should go directly to `/vote`. The tutorial skip check only runs as a `useEffect` on Tutorial 1's own mount — this creates a visible flash of Tutorial 1 before redirecting."
+39. "the Voting tab in `BottomNavigationBar` always navigates to `/vote-tutorial-1` (`components/BottomNavigationBar.tsx:39`). After a user has seen the tutorial, pressing the Voting tab should go directly to `/vote`. The tutorial skip check only runs as a `useEffect` on Tutorial 1's own mount — this creates a visible flash of Tutorial 1 before redirecting."
 40. "fix this: Google Places API is listed as a dependency in the spec for destination search and trending destinations. The `EXPO_PUBLIC_GOOGLE_PLACES_API_KEY` env var is referenced in `.env.example` but is never read or used in any screen."
 41. "how do i text the above fix"
 42. "this did not happen: Test in the app — go through onboarding (Create a new trip → name → invite → destination). In the 'Where to?' screen, type a city name like 'Par' into the search input. You should see a dropdown appear with Places suggestions like 'Paris, France', 'Parma, Italy', etc. Tap one to select it."
@@ -54,7 +54,8 @@ Prompts I asked Claude:
 47. "`expo-notifications` is not present in `package.json` and is not configured anywhere. No push notification categories (new collaborator joined, new itinerary item, voting reminder, trip starting soon) are implemented."
 48. "fix this: `expo-task-manager` and `expo-background-fetch` are not present in `package.json`. No background tasks for trip code expiry, vote tallying, or calendar sync are implemented."
 49. "fix this: No Supabase Realtime listeners for background sync of votes, itinerary changes, or new member joins."
-50. "add all the prompts i put in this chat as 'Prompts I asked Claude' in 'Prompt Log.txt'"
+
+
 Prompts I put in Claude Code for the development:
 Prompt 1 — Initial Master Prompt
 Read SPEC-2.md in this project. Implement the full mobile app 
