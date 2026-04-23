@@ -10,6 +10,7 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -133,6 +134,7 @@ export default function ProfilePage() {
   const router = useRouter();
 
   const [userName,       setUserName]       = useState('');
+  const [userEmail,      setUserEmail]      = useState('');
   const [avatarUri,      setAvatarUri]      = useState<string | null>(null);
   const [tripsTaken,     setTripsTaken]     = useState(0);
   const [editVisible,    setEditVisible]    = useState(false);
@@ -156,6 +158,8 @@ export default function ProfilePage() {
         const userId = session?.user.id;
 
         if (userId) {
+          setUserEmail(session?.user.email ?? '');
+
           const { data: profile } = await supabase
             .from('profiles')
             .select('name, avatar_url')
@@ -269,35 +273,85 @@ export default function ProfilePage() {
     }
   };
 
+  const handleAccountSettings = () => {
+    const email = userEmail || 'Not signed in';
+    Alert.alert(
+      'Account Settings',
+      `Signed in as:\n${email}`,
+      [
+        {
+          text: 'Send password reset',
+          onPress: async () => {
+            if (!userEmail) return;
+            const { error } = await supabase.auth.resetPasswordForEmail(userEmail);
+            if (error) {
+              Alert.alert('Error', error.message);
+            } else {
+              Alert.alert('Email sent', `A password reset link was sent to ${userEmail}.`);
+            }
+          },
+        },
+        { text: 'Close', style: 'cancel' },
+      ],
+    );
+  };
+
+  const handleGetHelp = () => {
+    Alert.alert(
+      'Get Help',
+      'Have a question or found a bug?\n\nEmail us at support@onthego.app or visit our help centre.',
+      [
+        {
+          text: 'Open help centre',
+          onPress: () => void Linking.openURL('https://onthego.app/help'),
+        },
+        { text: 'Close', style: 'cancel' },
+      ],
+    );
+  };
+
+  const handlePrivacy = () => {
+    Alert.alert(
+      'Privacy',
+      'On the GO! stores your trip data and profile information to power your experience. We never sell your data to third parties.\n\nRead our full privacy policy at onthego.app/privacy.',
+      [
+        {
+          text: 'Read policy',
+          onPress: () => void Linking.openURL('https://onthego.app/privacy'),
+        },
+        { text: 'Close', style: 'cancel' },
+      ],
+    );
+  };
+
   const SETTINGS_ITEMS: SettingsItem[] = [
     {
       key: 'account',
       icon: 'settings-outline',
       label: 'Account settings',
       hasChevron: true,
-      notificationDot: true, // hardcoded visible — conditional when Supabase wired
-      onPress: () => {},
+      onPress: handleAccountSettings,
     },
     {
       key: 'help',
       icon: 'help-circle-outline',
       label: 'Get help',
       hasChevron: true,
-      onPress: () => {},
+      onPress: handleGetHelp,
     },
     {
       key: 'view-profile',
       icon: 'person-outline',
       label: 'View profile',
       hasChevron: true,
-      onPress: () => {},
+      onPress: openEditName,
     },
     {
       key: 'privacy',
       icon: 'lock-closed-outline',
       label: 'Privacy',
       hasChevron: true,
-      onPress: () => {},
+      onPress: handlePrivacy,
     },
     {
       key: 'logout',
