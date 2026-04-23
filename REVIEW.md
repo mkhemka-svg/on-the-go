@@ -1,4 +1,4 @@
-# On the GO! — Code Review
+# On the GO! — Code Review (Previous)
 
 Reviewed against SPEC-2.md. Each finding is marked [PASS], [FAIL], or [WARN].
 

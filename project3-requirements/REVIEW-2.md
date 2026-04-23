@@ -1,4 +1,4 @@
-# Project Review vs SPEC-2.md
+# Project Review vs SPEC-2.md (Most Recent)
 
 1. [PASS] Authentication flow exists and matches the spec.
    - `app/sign-in.tsx` lines 43-245 implements email OTP, Google OAuth, and Apple sign in.
