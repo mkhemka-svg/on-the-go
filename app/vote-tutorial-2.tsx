@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, FontFamily } from '@/constants/theme';
 import { TUTORIAL_KEY, VOTING_BG_IMAGE } from '@/constants/votingConfig';
+import { notifyVotingReminder } from '@/constants/notifications';
 
 const { width, height } = Dimensions.get('window');
 
@@ -26,6 +27,7 @@ export default function VotingTutorial2Page() {
   const handleAdvance = async () => {
     // Mark both tutorials as seen — never shown again
     await AsyncStorage.setItem(TUTORIAL_KEY, 'true');
+    void notifyVotingReminder();
     router.replace('/vote');                // → VoteOnActivityPage
   };
 

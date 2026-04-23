@@ -17,6 +17,7 @@ import { Colors, FontFamily } from '@/constants/theme';
 import BottomNavigationBar from '@/components/BottomNavigationBar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
+import { notifyCollaboratorJoined } from '@/constants/notifications';
 import {
   Collaborator,
   AVATAR_COLORS,
@@ -107,6 +108,7 @@ export default function InviteMoreCrewPage() {
     const updated = [...collaborators, { id: String(Date.now()), name, email, color }];
     setCollaborators(updated);
     void AsyncStorage.setItem(INVITE_COLLAB_KEY, JSON.stringify(updated));
+    void notifyCollaboratorJoined(email);
     setEmailInput('');
   };
 

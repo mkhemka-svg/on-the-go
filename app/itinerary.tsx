@@ -23,6 +23,7 @@ import { Colors, FontFamily, Radius } from '@/constants/theme';
 import BottomNavigationBar from '@/components/BottomNavigationBar';
 import ItineraryItemCard, { ItineraryItem } from '@/components/ItineraryItemCard';
 import { INITIAL_ITEMS, loadItems, saveItems } from '@/constants/itineraryStore';
+import { notifyItineraryItemAdded } from '@/constants/notifications';
 
 const { width, height } = Dimensions.get('window');
 const H_PADDING = width * 0.06;
@@ -173,6 +174,7 @@ export default function ItineraryPage() {
     saveItems(updated).catch(e =>
       console.warn('[itinerary] Failed to persist items:', e)
     );
+    void notifyItineraryItemAdded(newItem.title);
     setPendingPhotoUri(null);
     setAddModalVisible(false);
   };

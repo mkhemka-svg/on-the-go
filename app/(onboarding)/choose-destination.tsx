@@ -17,7 +17,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontFamily, Radius } from '@/constants/theme';
 import TripCreationStepper from '@/components/TripCreationStepper';
-import { commitDraftAsTrip } from '@/constants/tripStore';
+import { commitDraftAsTrip, loadDraft } from '@/constants/tripStore';
+import { scheduleTripStartNotification } from '@/constants/notifications';
 
 const { width, height } = Dimensions.get('window');
 
@@ -229,7 +230,9 @@ export default function ChooseDestinationPage() {
       setDestinationError('Please select or enter a destination.');
       return;
     }
+    const draft = await loadDraft();
     await commitDraftAsTrip(selectedName);
+    void scheduleTripStartNotification(draft?.name ?? selectedName, draft?.startDate ?? null);
     router.replace('/saved-trips');
   };
 

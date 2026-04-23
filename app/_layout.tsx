@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   Acme_400Regular,
   useFonts as useAcme,
@@ -13,6 +13,8 @@ import {
   useFonts as useMerriweather,
 } from '@expo-google-fonts/merriweather';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import * as Notifications from 'expo-notifications';
+import { registerForPushNotifications } from '@/constants/notifications';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -26,11 +28,33 @@ export default function RootLayout() {
 
   const fontsLoaded = acmeLoaded && merriweatherLoaded;
 
+  // Register for push notifications once fonts are ready
+  const notifListenerRef     = useRef<Notifications.EventSubscription | null>(null);
+  const notifResponseRef     = useRef<Notifications.EventSubscription | null>(null);
+
   useEffect(() => {
     if (fontsLoaded) {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded]);
+
+  useEffect(() => {
+    void registerForPushNotifications();
+
+    notifListenerRef.current = Notifications.addNotificationReceivedListener(() => {
+      // Notification arrived while app is foregrounded — handler in
+      // setNotificationHandler (notifications.ts) shows it automatically.
+    });
+
+    notifResponseRef.current = Notifications.addNotificationResponseReceivedListener(() => {
+      // User tapped a notification — deep-link handling can go here later.
+    });
+
+    return () => {
+      notifListenerRef.current?.remove();
+      notifResponseRef.current?.remove();
+    };
+  }, []);
 
   if (!fontsLoaded) return null;
 
