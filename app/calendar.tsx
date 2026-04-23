@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,28 +11,25 @@ import { Ionicons } from '@expo/vector-icons';
 import { Calendar, DateData } from 'react-native-calendars';
 import { Colors, FontFamily, Radius } from '@/constants/theme';
 import BottomNavigationBar from '@/components/BottomNavigationBar';
+import { loadItems } from '@/constants/itineraryStore';
 
 const { width } = Dimensions.get('window');
 const H_PADDING = width * 0.06;
 
-// ── Activity dates from the hardcoded itinerary items ────────
-// These match INITIAL_ITEMS in app/itinerary.tsx
-const ACTIVITY_DATES: string[] = [
-  '2026-04-15',
-  '2026-04-16',
-  '2026-04-17',
-];
-
-const SELECTED_COLOR  = '#F5C518';   // yellow — spec
-const TODAY_COLOR     = '#2B5BA8';   // dark blue — spec
+const SELECTED_COLOR  = '#F5C518';
+const TODAY_COLOR     = '#2B5BA8';
 const DOT_COLOR       = Colors.darkNavy;
 
-// ── Build markedDates for react-native-calendars ─────────────
-function buildMarkedDates(selected: string | null) {
+// "4/15" + year → "2026-04-15"
+function shortToISO(shortDate: string, year: number): string {
+  const [m, d] = shortDate.split('/').map(Number);
+  return `${year}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+function buildMarkedDates(activityDates: string[], selected: string | null) {
   const result: Record<string, object> = {};
 
-  // Activity dot on each date that has items
-  for (const date of ACTIVITY_DATES) {
+  for (const date of activityDates) {
     result[date] = {
       dots: [{ key: 'activity', color: DOT_COLOR, selectedDotColor: Colors.white }],
     };
@@ -55,7 +52,16 @@ function buildMarkedDates(selected: string | null) {
 
 export default function CalendarPage() {
   const router = useRouter();
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDate,  setSelectedDate]  = useState<string | null>(null);
+  const [activityDates, setActivityDates] = useState<string[]>([]);
+
+  useEffect(() => {
+    loadItems().then(items => {
+      const year = new Date().getFullYear();
+      const dates = [...new Set(items.map(i => shortToISO(i.scheduledDate, year)))];
+      setActivityDates(dates);
+    });
+  }, []);
 
   const handleDayPress = (day: DateData) => {
     setSelectedDate(day.dateString);
@@ -85,7 +91,7 @@ export default function CalendarPage() {
 
             // Dots + selection support
             markingType="multi-dot"
-            markedDates={buildMarkedDates(selectedDate)}
+            markedDates={buildMarkedDates(activityDates, selectedDate)}
 
             // Navigation
             onDayPress={handleDayPress}

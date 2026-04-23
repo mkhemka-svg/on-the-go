@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -8,10 +8,12 @@ import ReanimatedLib, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withSpring,
   runOnJS,
 } from 'react-native-reanimated';
 import { Colors, FontFamily, Radius } from '@/constants/theme';
 import BottomNavigationBar from '@/components/BottomNavigationBar';
+import { loadItems } from '@/constants/itineraryStore';
 
 const { width } = Dimensions.get('window');
 const H_PADDING      = width * 0.05;
@@ -41,25 +43,27 @@ interface Activity {
   dayOffset: number; // 0 = Mon … 6 = Sun within displayed week
 }
 
-// ── Initial placeholder data ──────────────────────────────────
+// ── Color palette cycled across loaded activities ─────────────
 
-const INITIAL_ACTIVITIES: Activity[] = [
-  {
-    id: '1', title: 'Newport Trip',
-    startHour: 10, startMinute: 0, durationMinutes: 240,
-    color: Colors.darkNavy, accentColor: Colors.yellow, dayOffset: 0,
-  },
-  {
-    id: '2', title: 'Dinner at Strega',
-    startHour: 18, startMinute: 0, durationMinutes: 90,
-    color: '#2563B0', accentColor: Colors.lightYellow, dayOffset: 2,
-  },
-  {
-    id: '3', title: 'Duck Tour',
-    startHour: 11, startMinute: 0, durationMinutes: 120,
-    color: '#1a7a4a', accentColor: Colors.lightYellow, dayOffset: 1,
-  },
+const PALETTE = [
+  { color: Colors.darkNavy, accentColor: Colors.yellow },
+  { color: '#2563B0',       accentColor: Colors.lightYellow },
+  { color: '#1a7a4a',       accentColor: Colors.lightYellow },
+  { color: '#7c3aed',       accentColor: '#ede9fe' },
+  { color: '#b45309',       accentColor: '#fef3c7' },
 ];
+
+// "1:00 pm" → { hour: 13, minute: 0 }
+function parseTime(scheduledTime: string): { hour: number; minute: number } {
+  const m = scheduledTime.match(/(\d+):(\d+)\s*(am|pm)/i);
+  if (!m) return { hour: 10, minute: 0 };
+  let hour = parseInt(m[1]);
+  const minute = parseInt(m[2]);
+  const ampm = m[3].toLowerCase();
+  if (ampm === 'pm' && hour !== 12) hour += 12;
+  if (ampm === 'am' && hour === 12) hour = 0;
+  return { hour, minute };
+}
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -109,6 +113,12 @@ function getWeekDates(dateString: string): Date[] {
   });
 }
 
+function offsetDate(dateString: string, days: number): string {
+  const d = new Date(dateString + 'T12:00:00');
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split('T')[0];
+}
+
 function getDayOffset(dateString: string): number {
   const day = new Date(dateString + 'T12:00:00').getDay();
   return day === 0 ? 6 : day - 1;
@@ -121,17 +131,50 @@ export default function CalendarDayPage() {
   const router   = useRouter();
 
   const [viewMode,   setViewMode]   = useState<'day' | 'week'>('day');
-  const [activities, setActivities] = useState<Activity[]>(INITIAL_ACTIVITIES);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [dragging,   setDragging]   = useState<Activity | null>(null);
   const [hoverDay,   setHoverDay]   = useState<number | null>(null);
 
   const dragX       = useSharedValue(0);
   const dragY       = useSharedValue(0);
   const dragOpacity = useSharedValue(0);
+  const slideX      = useSharedValue(0);
 
-  const safeDate         = date ?? new Date().toISOString().split('T')[0];
-  const weekDates        = getWeekDates(safeDate);
+  const safeDate          = date ?? new Date().toISOString().split('T')[0];
+  const weekDates         = getWeekDates(safeDate);
   const selectedDayOffset = getDayOffset(safeDate);
+
+  // Load itinerary items from the shared store and map to Activity shape
+  useEffect(() => {
+    loadItems().then(items => {
+      const monday = weekDates[0]; // T12:00:00 noon
+      const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+      const mapped: Activity[] = [];
+      items.forEach((item, idx) => {
+        const [m, d] = item.scheduledDate.split('/').map(Number);
+        const itemDate = new Date(
+          `${monday.getFullYear()}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}T12:00:00`
+        );
+        const dayOffset = Math.round((itemDate.getTime() - monday.getTime()) / MS_PER_DAY);
+        if (dayOffset < 0 || dayOffset > 6) return; // outside this week
+
+        const { hour, minute } = parseTime(item.scheduledTime);
+        const { color, accentColor } = PALETTE[idx % PALETTE.length];
+        mapped.push({
+          id:              item.id,
+          title:           item.title,
+          startHour:       hour,
+          startMinute:     minute,
+          durationMinutes: 60,
+          color,
+          accentColor,
+          dayOffset,
+        });
+      });
+      setActivities(mapped);
+    });
+  }, [safeDate]); // reload when the viewed date changes (day swipe)
 
   // ── Drag callbacks (JS thread) ───────────────────────────────
 
@@ -159,12 +202,45 @@ export default function CalendarDayPage() {
     setHoverDay(null);
   }, []);
 
+  const navigateDay = useCallback((direction: number) => {
+    slideX.value = 0;
+    router.replace({ pathname: '/calendar-day', params: { date: offsetDate(safeDate, direction) } });
+  }, [safeDate, router, slideX]);
+
+  const swipeGesture = Gesture.Pan()
+    .activeOffsetX([-40, 40])   // only activate for horizontal movement
+    .failOffsetY([-15, 15])     // give up if user is scrolling vertically
+    .onUpdate((e) => {
+      slideX.value = e.translationX;
+    })
+    .onEnd((e) => {
+      const bigEnough = Math.abs(e.translationX) > 60 || Math.abs(e.velocityX) > 400;
+      if (bigEnough) {
+        const direction = e.translationX > 0 ? -1 : 1;
+        slideX.value = withTiming(direction > 0 ? -width : width, { duration: 200 }, () => {
+          runOnJS(navigateDay)(direction);
+        });
+      } else {
+        slideX.value = withSpring(0, { damping: 20, stiffness: 200 });
+      }
+    })
+    .onFinalize(() => {
+      // spring back if gesture was cancelled (e.g. interrupted by scroll)
+      if (slideX.value !== 0) {
+        slideX.value = withSpring(0, { damping: 20, stiffness: 200 });
+      }
+    });
+
   // ── Overlay animated style ───────────────────────────────────
 
   const overlayStyle = useAnimatedStyle(() => ({
     left:    dragX.value,
     top:     dragY.value,
     opacity: dragOpacity.value,
+  }));
+
+  const cardSlideStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: slideX.value }],
   }));
 
   // ── Build gesture for a single activity ──────────────────────
@@ -265,12 +341,10 @@ export default function CalendarDayPage() {
         showsVerticalScrollIndicator={false}
         scrollEnabled={dragging === null}
       >
-        <View style={styles.card}>
-
-          {viewMode === 'day' ? (
-
-            /* ══ Day view ══ */
-            <View style={{ height: CONTAINER_H, position: 'relative' }}>
+        {viewMode === 'day' ? (
+          <GestureDetector gesture={swipeGesture}>
+            <ReanimatedLib.View style={[styles.card, cardSlideStyle]}>
+              <View style={{ height: CONTAINER_H, position: 'relative' }}>
               {TIME_SLOTS.map((label, i) => (
                 <View key={label} style={[styles.slotRow, { top: i * SLOT_H }]} pointerEvents="none">
                   <Text style={styles.timeLabel}>{label}</Text>
@@ -304,11 +378,11 @@ export default function CalendarDayPage() {
                   )}
                 </View>
               ))}
-            </View>
-
-          ) : (
-
-            /* ══ Week view ══ */
+              </View>
+            </ReanimatedLib.View>
+          </GestureDetector>
+        ) : (
+          <View style={styles.card}>
             <>
               {/* Day-of-week header */}
               <View style={styles.weekHeader}>
@@ -398,8 +472,8 @@ export default function CalendarDayPage() {
                 ))}
               </View>
             </>
-          )}
-        </View>
+          </View>
+        )}
 
         {viewMode === 'week' && (
           <Text style={styles.dragHint}>Long-press an activity and drag to a new day</Text>

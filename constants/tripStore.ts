@@ -5,6 +5,7 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TripCardData } from '@/components/TripCard';
+import { supabase } from '@/lib/supabase';
 
 export const TRIPS_KEY = 'saved_trips';
 
@@ -15,6 +16,7 @@ export interface TripDraft {
   name: string;
   startDate: string | null;  // ISO string
   endDate: string | null;    // ISO string
+  tripCode?: string;         // generated in invite-collaborators step
 }
 
 // ── Fallback image for custom destinations ─────────────────────
@@ -102,5 +104,23 @@ export async function commitDraftAsTrip(destinationName: string): Promise<void> 
 
   const existing = await loadTrips();
   await saveTrips([newTrip, ...existing]);
+
+  // Persist to Supabase when configured and a trip code exists in the draft
+  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  const isConfigured = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co';
+  if (isConfigured && draft?.tripCode) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user.id;
+    if (userId) {
+      await supabase.from('trips').insert({
+        name:       draft.name ?? 'My Trip',
+        trip_code:  draft.tripCode,
+        creator_id: userId,
+        start_date: draft.startDate ? draft.startDate.split('T')[0] : null,
+        end_date:   draft.endDate   ? draft.endDate.split('T')[0]   : null,
+      });
+    }
+  }
+
   await clearDraft();
 }
