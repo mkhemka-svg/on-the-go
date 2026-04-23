@@ -12,35 +12,24 @@ export default function LoadingPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Show the splash for a minimum of 1.5s, then resolve the session.
-    // onAuthStateChange fires immediately with the persisted session (or null).
-    let resolved = false;
     let timerDone = false;
-    let destination: '/choose-trip' | '/sign-in' = '/sign-in';
+    let destination: '/choose-trip' | '/sign-in' | null = null;
 
     const navigate = () => {
-      router.replace(destination);
+      if (destination !== null) router.replace(destination);
     };
 
-    // Minimum splash duration
     const timer = setTimeout(() => {
       timerDone = true;
-      if (resolved) navigate();
+      navigate();
     }, 1500);
 
-    // Check persisted session — fires synchronously on first call if session is cached
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       destination = session ? '/choose-trip' : '/sign-in';
-      resolved = true;
       if (timerDone) navigate();
-      // Unsubscribe after first event — we only need the initial state
-      subscription.unsubscribe();
     });
 
-    return () => {
-      clearTimeout(timer);
-      subscription.unsubscribe();
-    };
+    return () => clearTimeout(timer);
   }, [router]);
 
   return (
