@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
-import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import { GestureDetector, Gesture, ScrollView } from 'react-native-gesture-handler';
 import ReanimatedLib, {
   useSharedValue,
   useAnimatedStyle,
@@ -169,15 +169,19 @@ export default function CalendarDayPage() {
 
   // ── Build gesture for a single activity ──────────────────────
 
-  const makeGesture = (activity: Activity) =>
-    Gesture.Pan()
-      .activateAfterLongPress(400)
+  const makeGesture = (activity: Activity) => {
+    const longPress = Gesture.LongPress()
+      .minDuration(400)
+      .maxDistance(999)   // don't cancel on movement
       .onStart((e) => {
         dragX.value       = e.absoluteX - COL_W / 2;
         dragY.value       = e.absoluteY - blockHeight(activity) / 2;
         dragOpacity.value = withTiming(1, { duration: 120 });
         runOnJS(onDragStart)(activity);
-      })
+      });
+
+    const pan = Gesture.Pan()
+      .activateAfterLongPress(400)
       .onChange((e) => {
         dragX.value = e.absoluteX - COL_W / 2;
         dragY.value = e.absoluteY - blockHeight(activity) / 2;
@@ -191,6 +195,9 @@ export default function CalendarDayPage() {
         dragOpacity.value = withTiming(0, { duration: 120 });
         runOnJS(onDragCancel)();
       });
+
+    return Gesture.Simultaneous(longPress, pan);
+  };
 
   // ── Group activities by day for week view ────────────────────
 
@@ -252,6 +259,7 @@ export default function CalendarDayPage() {
         style={{ flex: 1 }}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={dragging === null}
       >
         <View style={styles.card}>
 
