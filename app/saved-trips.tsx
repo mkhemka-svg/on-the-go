@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -14,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontFamily, Radius } from '@/constants/theme';
 import TripCard, { TripCardData } from '@/components/TripCard';
 import BottomNavigationBar from '@/components/BottomNavigationBar';
-import { loadTrips } from '@/constants/tripStore';
+import { loadTrips, saveTrips } from '@/constants/tripStore';
 
 const { width, height } = Dimensions.get('window');
 
@@ -34,10 +35,23 @@ export default function YourSavedTripsPage() {
       )
     : trips;
 
-  const handleTripPress = (id: string) => {
-    // TODO: navigate to that trip's itinerary when Supabase is wired up
-    // router.push({ pathname: '/itinerary', params: { tripId: id } });
+  const handleTripPress = (_id: string) => {
     router.push('/itinerary');
+  };
+
+  const handleDeleteTrip = (id: string) => {
+    Alert.alert('Delete Trip', 'Are you sure you want to delete this trip?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          const updated = trips.filter(t => t.id !== id);
+          setTrips(updated);
+          await saveTrips(updated);
+        },
+      },
+    ]);
   };
 
   return (
@@ -99,7 +113,7 @@ export default function YourSavedTripsPage() {
           </Text>
         ) : (
           filtered.map(trip => (
-            <TripCard key={trip.id} trip={trip} onPress={handleTripPress} />
+            <TripCard key={trip.id} trip={trip} onPress={handleTripPress} onDelete={handleDeleteTrip} />
           ))
         )}
       </ScrollView>

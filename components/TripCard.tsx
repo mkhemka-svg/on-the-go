@@ -17,9 +17,10 @@ export interface TripCardData {
 interface Props {
   trip: TripCardData;
   onPress: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
-export default function TripCard({ trip, onPress }: Props) {
+export default function TripCard({ trip, onPress, onDelete }: Props) {
   return (
     <TouchableOpacity
       style={styles.card}
@@ -36,7 +37,18 @@ export default function TripCard({ trip, onPress }: Props) {
 
       {/* Info section */}
       <View style={styles.info}>
-        <Text style={styles.tripName} numberOfLines={1}>{trip.name}</Text>
+        <View style={styles.nameRow}>
+          <Text style={styles.tripName} numberOfLines={1}>{trip.name}</Text>
+          {onDelete && (
+            <TouchableOpacity
+              onPress={() => onDelete(trip.id)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.deleteBtn}
+            >
+              <Ionicons name="trash-outline" size={18} color={Colors.lightGray} />
+            </TouchableOpacity>
+          )}
+        </View>
 
         <View style={styles.metaRow}>
           <Ionicons name="location-outline" size={14} color={Colors.lightGray} />
@@ -74,6 +86,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     gap: 6,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
+  deleteBtn: {
+    padding: 2,
   },
   tripName: {
     fontFamily: FontFamily.merriweatherBold,
