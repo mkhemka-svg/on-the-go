@@ -23,6 +23,7 @@ import { supabase } from '@/lib/supabase';
 import { loadTrips } from '@/constants/tripStore';
 
 const AVATAR_CACHE_KEY = 'profile_avatar_uri';
+const NAME_CACHE_KEY   = 'profile_name';
 
 const { width, height } = Dimensions.get('window');
 
@@ -141,7 +142,9 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function loadProfile() {
-      // Restore cached avatar immediately so there's no flash
+      // Restore cached name and avatar immediately so there's no flash
+      const cachedName   = await AsyncStorage.getItem(NAME_CACHE_KEY);
+      if (cachedName)   setUserName(cachedName);
       const cachedAvatar = await AsyncStorage.getItem(AVATAR_CACHE_KEY);
       if (cachedAvatar) setAvatarUri(cachedAvatar);
 
@@ -159,7 +162,10 @@ export default function ProfilePage() {
             .eq('id', userId)
             .single();
 
-          if (profile?.name) setUserName(profile.name);
+          if (profile?.name) {
+            setUserName(profile.name);
+            void AsyncStorage.setItem(NAME_CACHE_KEY, profile.name);
+          }
           if (profile?.avatar_url) {
             setAvatarUri(profile.avatar_url);
             void AsyncStorage.setItem(AVATAR_CACHE_KEY, profile.avatar_url);
@@ -254,6 +260,7 @@ export default function ProfilePage() {
         }
       }
       setUserName(trimmed);
+      void AsyncStorage.setItem(NAME_CACHE_KEY, trimmed);
       setEditVisible(false);
     } catch {
       Alert.alert('Error', 'Could not save name.');
