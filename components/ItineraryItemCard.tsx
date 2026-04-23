@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Animated, Image } from 'react-native';
 import { useRef, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontFamily, Radius } from '@/constants/theme';
@@ -11,6 +11,7 @@ export interface ItineraryItem {
   description: string;
   scheduledDate: string;  // e.g. "4/15"
   scheduledTime: string;  // e.g. "1:00 pm"
+  photoUri?: string;
 }
 
 interface Props {
@@ -60,6 +61,9 @@ export default function ItineraryItemCard({ item, isExpanded, onToggle }: Props)
         <>
           <View style={styles.divider} />
           <Text style={styles.description}>{item.description}</Text>
+          {item.photoUri ? (
+            <Image source={{ uri: item.photoUri }} style={styles.photo} resizeMode="cover" />
+          ) : null}
           <View style={styles.scheduledRow}>
             <Ionicons name="calendar-outline" size={14} color={Colors.darkNavy} />
             <Text style={styles.scheduledText}>
@@ -119,6 +123,12 @@ const styles = StyleSheet.create({
     fontSize: width * 0.034,
     color: '#555',
     lineHeight: width * 0.052,
+    marginBottom: width * 0.025,
+  },
+  photo: {
+    width: '100%',
+    height: width * 0.45,
+    borderRadius: Radius.md,
     marginBottom: width * 0.025,
   },
   scheduledRow: {

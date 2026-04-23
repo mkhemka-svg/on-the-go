@@ -12,6 +12,7 @@ import {
   Platform,
   Alert,
   TextInput,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -69,6 +70,7 @@ export default function ItineraryPage() {
   const [formTimeError, setFormTimeError]       = useState('');
   const [showDatePicker, setShowDatePicker]     = useState(false);
   const [showTimePicker, setShowTimePicker]     = useState(false);
+  const [pendingPhotoUri, setPendingPhotoUri]   = useState<string | null>(null);
 
   // ── Toggle card expand ─────────────────────────────────────
   const handleToggle = (id: string) => {
@@ -105,7 +107,8 @@ export default function ItineraryPage() {
         quality: 0.85,
       });
       if (!result.canceled && result.assets?.length) {
-        Alert.alert('Photo captured', 'Photo ready to attach to your itinerary.');
+        setPendingPhotoUri(result.assets[0].uri);
+        handleOpenAddForm(true);
       }
     } catch {
       Alert.alert('Error', 'Could not open camera.');
@@ -113,7 +116,7 @@ export default function ItineraryPage() {
   };
 
   // ── Open add form ──────────────────────────────────────────
-  const handleOpenAddForm = () => {
+  const handleOpenAddForm = (keepPhoto = false) => {
     const now = new Date();
     setFormTitle('');
     setFormDescription('');
@@ -126,6 +129,7 @@ export default function ItineraryPage() {
     setFormTimeError('');
     setShowDatePicker(false);
     setShowTimePicker(false);
+    if (!keepPhoto) setPendingPhotoUri(null);
     setAddModalVisible(true);
   };
 
@@ -152,12 +156,14 @@ export default function ItineraryPage() {
       description: formDescription.trim(),
       scheduledDate: formatScheduledDate(formDate),
       scheduledTime: formatTime(formTime),
+      ...(pendingPhotoUri ? { photoUri: pendingPhotoUri } : {}),
     };
     const updated = [...items, newItem];
     setItems(updated);
     saveItems(updated).catch(e =>
       console.warn('[itinerary] Failed to persist items:', e)
     );
+    setPendingPhotoUri(null);
     setAddModalVisible(false);
   };
 
@@ -211,7 +217,7 @@ export default function ItineraryPage() {
         {/* Add item tap target */}
         <TouchableOpacity
           style={styles.addInputRow}
-          onPress={handleOpenAddForm}
+          onPress={() => handleOpenAddForm()}
           activeOpacity={0.8}
         >
           <Text style={styles.addInputPlaceholder}>Add a new item to your list</Text>
@@ -247,6 +253,15 @@ export default function ItineraryPage() {
           <Pressable style={styles.modalBackdrop} onPress={() => setAddModalVisible(false)} />
           <View style={styles.formCard}>
             <Text style={styles.formTitle}>Add Activity</Text>
+
+            {pendingPhotoUri ? (
+              <View style={styles.photoPreviewRow}>
+                <Image source={{ uri: pendingPhotoUri }} style={styles.photoPreview} resizeMode="cover" />
+                <TouchableOpacity onPress={() => setPendingPhotoUri(null)} style={styles.photoRemove}>
+                  <Ionicons name="close-circle" size={20} color={Colors.darkNavy} />
+                </TouchableOpacity>
+              </View>
+            ) : null}
 
             <Text style={styles.fieldLabel}>Activity Title *</Text>
             <TextInput
@@ -562,6 +577,22 @@ const styles = StyleSheet.create({
     color: Colors.red,
     marginTop: -(height * 0.012),
     marginBottom: height * 0.014,
+  },
+  photoPreviewRow: {
+    position: 'relative',
+    marginBottom: height * 0.018,
+  },
+  photoPreview: {
+    width: '100%',
+    height: height * 0.18,
+    borderRadius: Radius.md,
+  },
+  photoRemove: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: Colors.white,
+    borderRadius: 10,
   },
   dateField: {
     flexDirection: 'row',
