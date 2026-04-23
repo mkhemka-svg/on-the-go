@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontFamily } from '@/constants/theme';
 import BottomNavigationBar from '@/components/BottomNavigationBar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '@/lib/supabase';
 import {
   Collaborator,
   AVATAR_COLORS,
@@ -42,12 +43,34 @@ export default function InviteMoreCrewPage() {
   const [emailInput, setEmailInput]       = useState('');
   const [collaborators, setCollaborators] = useState<Collaborator[]>(INITIAL_COLLABORATORS);
 
-  // Load persisted trip code and collaborators on mount
+  // Load trip code (Supabase → AsyncStorage cache → generate fallback) and collaborators
   useEffect(() => {
-    Promise.all([
-      AsyncStorage.getItem(INVITE_CODE_KEY),
-      AsyncStorage.getItem(INVITE_COLLAB_KEY),
-    ]).then(([storedCode, storedCollabs]) => {
+    async function loadTripCode() {
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+      const isConfigured = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co';
+
+      if (isConfigured) {
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user.id;
+        if (userId) {
+          const { data: trip } = await supabase
+            .from('trips')
+            .select('trip_code')
+            .eq('creator_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (trip?.trip_code) {
+            setTripCode(trip.trip_code);
+            void AsyncStorage.setItem(INVITE_CODE_KEY, trip.trip_code);
+            return;
+          }
+        }
+      }
+
+      // Fallback: AsyncStorage cache, then generate
+      const storedCode = await AsyncStorage.getItem(INVITE_CODE_KEY);
       if (storedCode) {
         setTripCode(storedCode);
       } else {
@@ -55,10 +78,15 @@ export default function InviteMoreCrewPage() {
         setTripCode(code);
         void AsyncStorage.setItem(INVITE_CODE_KEY, code);
       }
-      if (storedCollabs) {
-        setCollaborators(JSON.parse(storedCollabs) as Collaborator[]);
-      }
-    });
+    }
+
+    async function loadCollaborators() {
+      const stored = await AsyncStorage.getItem(INVITE_COLLAB_KEY);
+      if (stored) setCollaborators(JSON.parse(stored) as Collaborator[]);
+    }
+
+    void loadTripCode();
+    void loadCollaborators();
   }, []);
 
   const { copied, copiedOpacity, handleCopy } = useCopyCode(tripCode);
