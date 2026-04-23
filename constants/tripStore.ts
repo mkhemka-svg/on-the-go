@@ -6,6 +6,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TripCardData } from '@/components/TripCard';
 import { supabase } from '@/lib/supabase';
+import { fetchUnsplashImage } from '@/constants/unsplash';
 
 export const TRIPS_KEY = 'saved_trips';
 
@@ -19,27 +20,6 @@ export interface TripDraft {
   tripCode?: string;         // generated in invite-collaborators step
 }
 
-// ── Fallback image for custom destinations ─────────────────────
-const FALLBACK_COVER =
-  'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&auto=format&fit=crop';
-
-// Image map for known trending destinations (by destination name)
-const DESTINATION_IMAGES: Record<string, string> = {
-  Paris:       'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&auto=format&fit=crop',
-  Tokyo:       'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800&auto=format&fit=crop',
-  'New York':  'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800&auto=format&fit=crop',
-  Bali:        'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&auto=format&fit=crop',
-  London:      'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800&auto=format&fit=crop',
-  Barcelona:   'https://images.unsplash.com/photo-1583422409516-2895a77efded?w=800&auto=format&fit=crop',
-  Cancún:      'https://images.unsplash.com/photo-1552074284-5e88ef1aef18?w=800&auto=format&fit=crop',
-  Dubai:       'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&auto=format&fit=crop',
-  Sydney:      'https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=800&auto=format&fit=crop',
-  Rome:        'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=800&auto=format&fit=crop',
-};
-
-function coverForDestination(destinationName: string): string {
-  return DESTINATION_IMAGES[destinationName] ?? FALLBACK_COVER;
-}
 
 function formatDateRange(isoStart: string | null, isoEnd: string | null): { startDate: string; endDate: string } {
   const fmt = (iso: string | null) => {
@@ -93,13 +73,15 @@ export async function commitDraftAsTrip(destinationName: string): Promise<void> 
     draft?.endDate ?? null,
   );
 
+  const coverImageUrl = await fetchUnsplashImage(destinationName);
+
   const newTrip: TripCardData = {
     id: String(Date.now()),
     name: draft?.name ?? 'My Trip',
     location: destinationName,
     startDate,
     endDate,
-    coverImageUrl: coverForDestination(destinationName),
+    coverImageUrl,
   };
 
   const existing = await loadTrips();

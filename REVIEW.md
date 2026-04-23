@@ -21,7 +21,7 @@ Reviewed against SPEC-2.md. Each finding is marked [PASS], [FAIL], or [WARN].
 
 **1.6** [WARN] The dev-bypass that skips auth when `EXPO_PUBLIC_SUPABASE_URL` is unset (`app/sign-in.tsx:47–53`) is also present identically in the Google and Apple handlers (lines 79–83, 122–126). This is duplicated logic that should live in one place (e.g. a shared `isSupabaseConfigured()` helper).
 
-**1.7** [FAIL] Email is not validated before calling `signInWithOtp`. The check on line 154 (`email.trim().length >fix thuis 0`) only ensures the field is non-empty, not that it is a valid email address. A malformed email will fail at the Supabase call with a confusing API error rather than a clear inline message.
+**1.7** [FAIL] Email is not validated before calling `signInWithOtp`. The check on line 154 (`email.trim().length >fix 0`) only ensures the field is non-empty, not that it is a valid email address. A malformed email will fail at the Supabase call with a confusing API error rather than a clear inline message.
 
 **1.8** [WARN] `app/verify-otp.tsx` exists and handles resend / confirm UI, but the actual Supabase `verifyOtp` call is not wired. Comment says "TODO: wire up". The OTP screen is reachable but non-functional when Supabase is configured.
 
@@ -199,9 +199,9 @@ Reviewed against SPEC-2.md. Each finding is marked [PASS], [FAIL], or [WARN].
 
 **10.3** [FAIL] Google Places API is listed as a dependency in the spec for destination search and trending destinations. The `EXPO_PUBLIC_GOOGLE_PLACES_API_KEY` env var is referenced in `.env.example` but is never read or used in any screen.
 
-**10.4** [FAIL] Unsplash API (for destination cover images and voting card backgrounds) is not integrated. Images use hardcoded Unsplash `photo-id` URLs. The spec requires the voting screen to "pull the relevant picture from the internet for each activity based on the destination of the trip and the title of the activity."
+**10.4** [PASS] Unsplash API integrated via `constants/unsplash.ts`. The vote screen fetches a per-activity image using the activity title as the query. `commitDraftAsTrip` fetches a cover image using the destination name. Both fall back gracefully if the key is absent.
 
-**10.5** [WARN] Hardcoded Unsplash `?w=600` photo URLs will return images reliably today but Unsplash's free-tier hotlinking policy could revoke these at any time. Production use requires the Unsplash API with an access key to comply with their terms of service.
+**10.5** [PASS] Hardcoded Unsplash hotlink URLs removed from `tripStore.ts`. All images now go through the Unsplash API with the access key, complying with their terms of service.
 
 ---
 

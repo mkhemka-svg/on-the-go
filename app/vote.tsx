@@ -24,6 +24,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, FontFamily, Radius } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { loadItems, itemToActivity, Activity } from '@/constants/itineraryStore';
+import { fetchUnsplashImage } from '@/constants/unsplash';
 
 const VOTE_PROGRESS_KEY = 'vote_progress';
 
@@ -59,7 +60,7 @@ export default function VoteOnActivityPage() {
       loadItems(),
       AsyncStorage.getItem(VOTE_PROGRESS_KEY),
       supabase.auth.getSession(),
-    ]).then(([items, savedProgress, { data }]) => {
+    ]).then(async ([items, savedProgress, { data }]) => {
       const mapped = items.map(itemToActivity);
       setActivities(mapped);
 
@@ -69,6 +70,12 @@ export default function VoteOnActivityPage() {
       setDisplayIndex(resumeIdx);
 
       userIdRef.current = data.session?.user.id ?? null;
+
+      // Fetch Unsplash images for every activity concurrently, then update state
+      const imageUrls = await Promise.all(
+        mapped.map(a => fetchUnsplashImage(a.title)),
+      );
+      setActivities(mapped.map((a, i) => ({ ...a, imageUrl: imageUrls[i] })));
     });
   }, []);
 

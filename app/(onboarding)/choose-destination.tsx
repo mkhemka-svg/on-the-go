@@ -29,17 +29,25 @@ interface PlaceSuggestion {
 }
 
 async function fetchSuggestions(input: string): Promise<PlaceSuggestion[]> {
-  if (!PLACES_KEY || !input.trim()) return [];
+  if (!input.trim()) return [];
+  if (!PLACES_KEY) {
+    console.warn('[Places] EXPO_PUBLIC_GOOGLE_PLACES_API_KEY is not set');
+    return [];
+  }
   try {
     const url =
       `https://maps.googleapis.com/maps/api/place/autocomplete/json` +
       `?input=${encodeURIComponent(input)}` +
-      `&types=(cities)` +
+      `&types=%28cities%29` +
       `&key=${PLACES_KEY}`;
     const res  = await fetch(url);
-    const json = await res.json() as { predictions?: PlaceSuggestion[] };
+    const json = await res.json() as { status: string; predictions?: PlaceSuggestion[]; error_message?: string };
+    if (json.status !== 'OK' && json.status !== 'ZERO_RESULTS') {
+      console.warn('[Places] API error:', json.status, json.error_message ?? '');
+    }
     return json.predictions ?? [];
-  } catch {
+  } catch (e) {
+    console.warn('[Places] fetch failed:', e);
     return [];
   }
 }
