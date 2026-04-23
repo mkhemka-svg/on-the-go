@@ -26,6 +26,7 @@ import {
   CollaboratorsRow,
   useCopyCode,
 } from '@/components/InviteShared';
+import { loadDraft, saveDraft } from '@/constants/tripStore';
 
 const { width, height } = Dimensions.get('window');
 
@@ -36,7 +37,17 @@ export default function InviteCollaboratorsPage() {
   const [emailInput, setEmailInput]       = useState('');
   const [collaborators, setCollaborators] = useState<Collaborator[]>(INITIAL_COLLABORATORS);
 
-  useEffect(() => { setTripCode(generateTripCode()); }, []);
+  useEffect(() => {
+    loadDraft().then(draft => {
+      if (draft?.tripCode) {
+        setTripCode(draft.tripCode);
+      } else {
+        const code = generateTripCode();
+        setTripCode(code);
+        void saveDraft({ name: draft?.name ?? '', startDate: draft?.startDate ?? null, endDate: draft?.endDate ?? null, tripCode: code });
+      }
+    });
+  }, []);
 
   const { copied, copiedOpacity, handleCopy } = useCopyCode(tripCode);
 
