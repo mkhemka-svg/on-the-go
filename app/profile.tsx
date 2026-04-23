@@ -6,14 +6,23 @@ import {
   ScrollView,
   StyleSheet,
   Dimensions,
+  Modal,
+  TextInput,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontFamily, Radius } from '@/constants/theme';
 import BottomNavigationBar from '@/components/BottomNavigationBar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
 import { loadTrips } from '@/constants/tripStore';
+
+const AVATAR_CACHE_KEY = 'profile_avatar_uri';
 
 const { width, height } = Dimensions.get('window');
 
@@ -122,11 +131,20 @@ const menuStyles = StyleSheet.create({
 export default function ProfilePage() {
   const router = useRouter();
 
-  const [userName,    setUserName]    = useState('');
-  const [tripsTaken,  setTripsTaken]  = useState(0);
+  const [userName,       setUserName]       = useState('');
+  const [avatarUri,      setAvatarUri]      = useState<string | null>(null);
+  const [tripsTaken,     setTripsTaken]     = useState(0);
+  const [editVisible,    setEditVisible]    = useState(false);
+  const [draftName,      setDraftName]      = useState('');
+  const [savingName,     setSavingName]     = useState(false);
+  const [savingAvatar,   setSavingAvatar]   = useState(false);
 
   useEffect(() => {
     async function loadProfile() {
+      // Restore cached avatar immediately so there's no flash
+      const cachedAvatar = await AsyncStorage.getItem(AVATAR_CACHE_KEY);
+      if (cachedAvatar) setAvatarUri(cachedAvatar);
+
       const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
       const isConfigured = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co';
 
@@ -135,15 +153,18 @@ export default function ProfilePage() {
         const userId = session?.user.id;
 
         if (userId) {
-          // Name from profiles table
           const { data: profile } = await supabase
             .from('profiles')
-            .select('name')
+            .select('name, avatar_url')
             .eq('id', userId)
             .single();
-          if (profile?.name) setUserName(profile.name);
 
-          // Trip count from trip_members
+          if (profile?.name) setUserName(profile.name);
+          if (profile?.avatar_url) {
+            setAvatarUri(profile.avatar_url);
+            void AsyncStorage.setItem(AVATAR_CACHE_KEY, profile.avatar_url);
+          }
+
           const { count } = await supabase
             .from('trip_members')
             .select('id', { count: 'exact', head: true })
@@ -152,13 +173,94 @@ export default function ProfilePage() {
         }
       }
 
-      // Fallback: local AsyncStorage trip list
       const localTrips = await loadTrips();
       setTripsTaken(localTrips.length);
     }
 
     void loadProfile();
   }, []);
+
+  // ── Change avatar ────────────────────────────────────────────
+
+  const handleChangeAvatar = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Photo library access is needed to change your avatar.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets?.length) return;
+
+    const uri = result.assets[0].uri;
+    setSavingAvatar(true);
+    try {
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+      const isConfigured = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co';
+
+      let finalUrl = uri;
+
+      if (isConfigured) {
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user.id;
+        if (userId) {
+          const response = await fetch(uri);
+          const blob = await response.blob();
+          const path = `${userId}/avatar.jpg`;
+          const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+
+          if (!uploadError) {
+            const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
+            finalUrl = publicUrl;
+            await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', userId);
+          }
+        }
+      }
+
+      setAvatarUri(finalUrl);
+      void AsyncStorage.setItem(AVATAR_CACHE_KEY, finalUrl);
+    } catch {
+      Alert.alert('Error', 'Could not update avatar.');
+    } finally {
+      setSavingAvatar(false);
+    }
+  };
+
+  // ── Edit name ────────────────────────────────────────────────
+
+  const openEditName = () => {
+    setDraftName(userName);
+    setEditVisible(true);
+  };
+
+  const handleSaveName = async () => {
+    const trimmed = draftName.trim();
+    if (!trimmed) return;
+    setSavingName(true);
+    try {
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+      const isConfigured = supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co';
+      if (isConfigured) {
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user.id;
+        if (userId) {
+          await supabase.from('profiles').update({ name: trimmed }).eq('id', userId);
+        }
+      }
+      setUserName(trimmed);
+      setEditVisible(false);
+    } catch {
+      Alert.alert('Error', 'Could not save name.');
+    } finally {
+      setSavingName(false);
+    }
+  };
 
   const SETTINGS_ITEMS: SettingsItem[] = [
     {
@@ -226,13 +328,33 @@ export default function ProfilePage() {
 
         {/* ── UserStatsCard ── */}
         <View style={styles.statsCard}>
-          {/* Avatar illustration */}
-          <View style={styles.userAvatarCircle}>
-            <Ionicons name="person" size={width * 0.14} color={Colors.white} />
-          </View>
+          {/* Tappable avatar */}
+          <TouchableOpacity
+            style={styles.userAvatarCircle}
+            onPress={handleChangeAvatar}
+            activeOpacity={0.8}
+          >
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={styles.avatarImage} contentFit="cover" />
+            ) : (
+              <Ionicons name="person" size={width * 0.14} color={Colors.white} />
+            )}
+            {savingAvatar ? (
+              <View style={styles.avatarOverlay}>
+                <ActivityIndicator color={Colors.white} />
+              </View>
+            ) : (
+              <View style={styles.avatarEditBadge}>
+                <Ionicons name="camera" size={12} color={Colors.white} />
+              </View>
+            )}
+          </TouchableOpacity>
 
-          {/* Name */}
-          <Text style={styles.userName}>{userName || '—'}</Text>
+          {/* Name + edit pencil */}
+          <TouchableOpacity style={styles.nameRow} onPress={openEditName} activeOpacity={0.7}>
+            <Text style={styles.userName}>{userName || '—'}</Text>
+            <Ionicons name="pencil" size={16} color={Colors.lightGray} style={{ marginLeft: 6 }} />
+          </TouchableOpacity>
 
           {/* Divider */}
           <View style={styles.statsDivider} />
@@ -284,6 +406,35 @@ export default function ProfilePage() {
 
         <View style={{ height: height * 0.02 }} />
       </ScrollView>
+
+      {/* ── Edit name modal ── */}
+      <Modal visible={editVisible} transparent animationType="fade" onRequestClose={() => setEditVisible(false)}>
+        <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setEditVisible(false)}>
+          <TouchableOpacity style={styles.modalCard} activeOpacity={1} onPress={() => {}}>
+            <Text style={styles.modalTitle}>Edit name</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={draftName}
+              onChangeText={setDraftName}
+              placeholder="Your name"
+              placeholderTextColor={Colors.lightGray}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={handleSaveName}
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setEditVisible(false)}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalSaveBtn} onPress={handleSaveName} disabled={savingName}>
+                {savingName
+                  ? <ActivityIndicator color={Colors.white} size="small" />
+                  : <Text style={styles.modalSaveText}>Save</Text>}
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
 
       {/* ── BottomNavigationBar — no tab active ── */}
       <BottomNavigationBar />
@@ -360,12 +511,40 @@ const styles = StyleSheet.create({
     marginBottom: height * 0.018,
     borderWidth: 3,
     borderColor: Colors.lightYellow,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarEditBadge: {
+    position: 'absolute',
+    bottom: 6,
+    right: 6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: Colors.darkNavy,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: Colors.white,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: height * 0.02,
   },
   userName: {
     fontFamily: FontFamily.merriweatherBold,
     fontSize: width * 0.065,
     color: Colors.darkNavy,
-    marginBottom: height * 0.02,
   },
   statsDivider: {
     width: '85%',
@@ -448,5 +627,70 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
+  },
+
+  // ── Edit name modal ──
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: width * 0.08,
+  },
+  modalCard: {
+    width: '100%',
+    backgroundColor: Colors.white,
+    borderRadius: Radius.xl,
+    padding: width * 0.06,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+  },
+  modalTitle: {
+    fontFamily: FontFamily.merriweatherBold,
+    fontSize: width * 0.045,
+    color: Colors.darkNavy,
+    marginBottom: height * 0.02,
+  },
+  modalInput: {
+    borderWidth: 1.5,
+    borderColor: '#c8d8f0',
+    borderRadius: Radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: height * 0.016,
+    fontFamily: FontFamily.merriweather,
+    fontSize: width * 0.04,
+    color: Colors.darkNavy,
+    marginBottom: height * 0.022,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: height * 0.016,
+    borderRadius: Radius.md,
+    borderWidth: 1.5,
+    borderColor: '#c8d8f0',
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontFamily: FontFamily.merriweather,
+    fontSize: width * 0.036,
+    color: Colors.lightGray,
+  },
+  modalSaveBtn: {
+    flex: 1,
+    paddingVertical: height * 0.016,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.darkNavy,
+    alignItems: 'center',
+  },
+  modalSaveText: {
+    fontFamily: FontFamily.merriweatherBold,
+    fontSize: width * 0.036,
+    color: Colors.white,
   },
 });
