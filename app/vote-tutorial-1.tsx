@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,7 +10,6 @@ import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, FontFamily } from '@/constants/theme';
 import { TUTORIAL_KEY, VOTING_BG_IMAGE } from '@/constants/votingConfig';
 
@@ -41,15 +39,6 @@ function VerticalDashedLine() {
 
 export default function VotingTutorial1Page() {
   const router = useRouter();
-
-  // Skip both tutorials if already seen
-  useEffect(() => {
-    AsyncStorage.getItem(TUTORIAL_KEY).then(value => {
-      if (value === 'true') {
-        router.replace('/vote');
-      }
-    });
-  }, []);
 
   const handleBack    = () => router.back();
   const handleAdvance = () => router.push('/vote-tutorial-2');
