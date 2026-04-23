@@ -10,7 +10,6 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
-  Linking,
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -141,6 +140,7 @@ export default function ProfilePage() {
   const [draftName,      setDraftName]      = useState('');
   const [savingName,     setSavingName]     = useState(false);
   const [savingAvatar,   setSavingAvatar]   = useState(false);
+  const [privacyVisible, setPrivacyVisible] = useState(false);
 
   useEffect(() => {
     async function loadProfile() {
@@ -310,19 +310,7 @@ export default function ProfilePage() {
     );
   };
 
-  const handlePrivacy = () => {
-    Alert.alert(
-      'Privacy',
-      'On the GO! stores your trip data and profile information to power your experience. We never sell your data to third parties.\n\nRead our full privacy policy at onthego.app/privacy.',
-      [
-        {
-          text: 'Read policy',
-          onPress: () => void Linking.openURL('https://onthego.app/privacy'),
-        },
-        { text: 'Close', style: 'cancel' },
-      ],
-    );
-  };
+  const handlePrivacy = () => setPrivacyVisible(true);
 
   const SETTINGS_ITEMS: SettingsItem[] = [
     {
@@ -338,13 +326,6 @@ export default function ProfilePage() {
       label: 'Get help',
       hasChevron: true,
       onPress: handleGetHelp,
-    },
-    {
-      key: 'view-profile',
-      icon: 'person-outline',
-      label: 'View profile',
-      hasChevron: true,
-      onPress: openEditName,
     },
     {
       key: 'privacy',
@@ -495,6 +476,48 @@ export default function ProfilePage() {
             </View>
           </TouchableOpacity>
         </TouchableOpacity>
+      </Modal>
+
+      {/* ── Privacy policy modal ── */}
+      <Modal visible={privacyVisible} transparent animationType="slide" onRequestClose={() => setPrivacyVisible(false)}>
+        <View style={styles.privacyBackdrop}>
+          <View style={styles.privacySheet}>
+            <View style={styles.privacyHeader}>
+              <Text style={styles.privacyTitle}>Privacy Policy</Text>
+              <TouchableOpacity onPress={() => setPrivacyVisible(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="close" size={24} color={Colors.darkNavy} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.privacyContent}>
+              <Text style={styles.privacySection}>Last updated: April 2026</Text>
+
+              <Text style={styles.privacyHeading}>What we collect</Text>
+              <Text style={styles.privacyBody}>
+                On the GO! collects your email address when you sign up, your display name and profile photo if you choose to set them, and the trip data you create (trip names, dates, destinations, and itinerary items).
+              </Text>
+
+              <Text style={styles.privacyHeading}>How we use it</Text>
+              <Text style={styles.privacyBody}>
+                Your data is used solely to power your experience in the app — saving your trips, syncing across sessions, and personalising your profile. We do not sell, rent, or share your data with third parties for advertising or marketing purposes.
+              </Text>
+
+              <Text style={styles.privacyHeading}>Storage</Text>
+              <Text style={styles.privacyBody}>
+                Trip and profile data is stored securely in Supabase (PostgreSQL) with row-level security enabled, meaning only you can access your own data. Profile photos are stored in Supabase Storage.
+              </Text>
+
+              <Text style={styles.privacyHeading}>Your rights</Text>
+              <Text style={styles.privacyBody}>
+                You can delete your account and all associated data at any time by contacting us. You can update your name and profile photo directly in the app at any time.
+              </Text>
+
+              <Text style={styles.privacyHeading}>Contact</Text>
+              <Text style={styles.privacyBody}>
+                Questions? Reach us at support@onthego.app.
+              </Text>
+            </ScrollView>
+          </View>
+        </View>
       </Modal>
 
       {/* ── BottomNavigationBar — no tab active ── */}
@@ -753,5 +776,58 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.merriweatherBold,
     fontSize: width * 0.036,
     color: Colors.white,
+  },
+
+  // ── Privacy policy modal ──
+  privacyBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  privacySheet: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
+    maxHeight: height * 0.82,
+    paddingBottom: height * 0.04,
+  },
+  privacyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: width * 0.06,
+    paddingVertical: height * 0.022,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#e0e8f5',
+  },
+  privacyTitle: {
+    fontFamily: FontFamily.merriweatherBold,
+    fontSize: width * 0.048,
+    color: Colors.darkNavy,
+  },
+  privacyContent: {
+    paddingHorizontal: width * 0.06,
+    paddingTop: height * 0.02,
+    paddingBottom: height * 0.02,
+    gap: height * 0.008,
+  },
+  privacySection: {
+    fontFamily: FontFamily.merriweather,
+    fontSize: width * 0.032,
+    color: Colors.lightGray,
+    marginBottom: height * 0.012,
+  },
+  privacyHeading: {
+    fontFamily: FontFamily.merriweatherBold,
+    fontSize: width * 0.038,
+    color: Colors.darkNavy,
+    marginTop: height * 0.018,
+    marginBottom: height * 0.006,
+  },
+  privacyBody: {
+    fontFamily: FontFamily.merriweather,
+    fontSize: width * 0.035,
+    color: '#4a5568',
+    lineHeight: width * 0.056,
   },
 });
