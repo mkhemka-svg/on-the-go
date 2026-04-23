@@ -15,6 +15,9 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Notifications from 'expo-notifications';
 import { registerForPushNotifications } from '@/constants/notifications';
+// Must be imported at top level so TaskManager.defineTask calls run on every launch
+import '@/constants/backgroundTasks';
+import { registerBackgroundTasks } from '@/constants/backgroundTasks';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -40,6 +43,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     void registerForPushNotifications();
+    void registerBackgroundTasks();
 
     notifListenerRef.current = Notifications.addNotificationReceivedListener(() => {
       // Notification arrived while app is foregrounded — handler in
