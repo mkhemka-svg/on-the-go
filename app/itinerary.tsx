@@ -77,6 +77,16 @@ export default function ItineraryPage() {
     setExpandedId(prev => (prev === id ? null : id));
   };
 
+  // ── Delete activity ─────────────────────────────────────────
+  const handleDeleteItem = (id: string) => {
+    const updated = items.filter(i => i.id !== id);
+    setItems(updated);
+    if (expandedId === id) setExpandedId(null);
+    saveItems(updated).catch(e =>
+      console.warn('[itinerary] Failed to persist after delete:', e)
+    );
+  };
+
   // ── Attach actions ─────────────────────────────────────────
   const handleUploadFile = async () => {
     setDropdownVisible(false);
@@ -234,6 +244,7 @@ export default function ItineraryPage() {
               item={item}
               isExpanded={expandedId === item.id}
               onToggle={handleToggle}
+              onDelete={handleDeleteItem}
             />
           ))}
         </View>

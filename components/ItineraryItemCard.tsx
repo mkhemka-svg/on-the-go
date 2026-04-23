@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Animated, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Animated, Image, Alert } from 'react-native';
 import { useRef, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, FontFamily, Radius } from '@/constants/theme';
@@ -18,9 +18,10 @@ interface Props {
   item: ItineraryItem;
   isExpanded: boolean;
   onToggle: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
-export default function ItineraryItemCard({ item, isExpanded, onToggle }: Props) {
+export default function ItineraryItemCard({ item, isExpanded, onToggle, onDelete }: Props) {
   const rotation = useRef(new Animated.Value(isExpanded ? 1 : 0)).current;
 
   // Sync chevron animation whenever parent changes isExpanded
@@ -43,7 +44,7 @@ export default function ItineraryItemCard({ item, isExpanded, onToggle }: Props)
       onPress={() => onToggle(item.id)}
       activeOpacity={0.8}
     >
-      {/* ── Collapsed row: title + chevron ── */}
+      {/* ── Collapsed row: title + actions ── */}
       <View style={styles.headerRow}>
         <View style={styles.titleRow}>
           <View style={styles.dotIndicator} />
@@ -51,9 +52,25 @@ export default function ItineraryItemCard({ item, isExpanded, onToggle }: Props)
             {item.title}
           </Text>
         </View>
-        <Animated.View style={{ transform: [{ rotate: chevronRotation }] }}>
-          <Ionicons name="chevron-down" size={18} color={Colors.darkNavy} />
-        </Animated.View>
+        <View style={styles.headerActions}>
+          {isExpanded && onDelete && (
+            <TouchableOpacity
+              onPress={() =>
+                Alert.alert('Delete activity', `Remove "${item.title}" from the itinerary?`, [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Delete', style: 'destructive', onPress: () => onDelete(item.id) },
+                ])
+              }
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.deleteBtn}
+            >
+              <Ionicons name="trash-outline" size={17} color={Colors.lightGray} />
+            </TouchableOpacity>
+          )}
+          <Animated.View style={{ transform: [{ rotate: chevronRotation }] }}>
+            <Ionicons name="chevron-down" size={18} color={Colors.darkNavy} />
+          </Animated.View>
+        </View>
       </View>
 
       {/* ── Expanded: description + scheduled ── */}
@@ -92,6 +109,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  deleteBtn: {
+    padding: 2,
   },
   titleRow: {
     flexDirection: 'row',
