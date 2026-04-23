@@ -21,7 +21,7 @@ Reviewed against SPEC-2.md. Each finding is marked [PASS], [FAIL], or [WARN].
 
 **1.6** [WARN] The dev-bypass that skips auth when `EXPO_PUBLIC_SUPABASE_URL` is unset (`app/sign-in.tsx:47–53`) is also present identically in the Google and Apple handlers (lines 79–83, 122–126). This is duplicated logic that should live in one place (e.g. a shared `isSupabaseConfigured()` helper).
 
-**1.7** [FAIL] Email is not validated before calling `signInWithOtp`. The check on line 154 (`email.trim().length > 0`) only ensures the field is non-empty, not that it is a valid email address. A malformed email will fail at the Supabase call with a confusing API error rather than a clear inline message.
+**1.7** [FAIL] Email is not validated before calling `signInWithOtp`. The check on line 154 (`email.trim().length >fix thuis 0`) only ensures the field is non-empty, not that it is a valid email address. A malformed email will fail at the Supabase call with a confusing API error rather than a clear inline message.
 
 **1.8** [WARN] `app/verify-otp.tsx` exists and handles resend / confirm UI, but the actual Supabase `verifyOtp` call is not wired. Comment says "TODO: wire up". The OTP screen is reachable but non-functional when Supabase is configured.
 

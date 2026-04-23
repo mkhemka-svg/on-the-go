@@ -1,53 +1,63 @@
+import { useState, useCallback } from 'react';
 import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import ReanimatedLib, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
 import { Colors, FontFamily, Radius } from '@/constants/theme';
 import BottomNavigationBar from '@/components/BottomNavigationBar';
 
 const { width } = Dimensions.get('window');
-const H_PADDING   = width * 0.05;
-const LABEL_W     = 56;           // px — time label column
-const SLOT_H      = 72;           // px per hour — fixed so height encodes time
-const TIMELINE_START = 10;        // 10 am
+const H_PADDING      = width * 0.05;
+const LABEL_W        = 44;
+const SLOT_H         = 72;
+const TIMELINE_START = 10;
+const CARD_W         = width - 2 * H_PADDING;
+const COL_W          = (CARD_W - LABEL_W) / 7;
 
-// ── Time slot labels 10 am → 8 pm ────────────────────────────
 const TIME_SLOTS = [
   '10 am', '11 am', '12 pm', '1 pm', '2 pm',
   '3 pm',  '4 pm',  '5 pm',  '6 pm', '7 pm', '8 pm',
 ];
-const CONTAINER_H = TIME_SLOTS.length * SLOT_H;
+const CONTAINER_H  = TIME_SLOTS.length * SLOT_H;
+const DAY_ABBREVS  = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-// ── Hardcoded placeholder activities ─────────────────────────
-// Supabase will supply these filtered by tripId + date later
+// ── Types ─────────────────────────────────────────────────────
+
 interface Activity {
   id: string;
   title: string;
-  startHour: number;    // 24-h
+  startHour: number;
   startMinute: number;
   durationMinutes: number;
   color: string;
   accentColor: string;
+  dayOffset: number; // 0 = Mon … 6 = Sun within displayed week
 }
 
-const PLACEHOLDER_ACTIVITIES: Activity[] = [
+// ── Initial placeholder data ──────────────────────────────────
+
+const INITIAL_ACTIVITIES: Activity[] = [
   {
-    id: '1',
-    title: 'Day trip to Newport',
-    startHour: 10,
-    startMinute: 0,
-    durationMinutes: 240,     // 4 h
-    color: Colors.darkNavy,
-    accentColor: Colors.yellow,
+    id: '1', title: 'Newport Trip',
+    startHour: 10, startMinute: 0, durationMinutes: 240,
+    color: Colors.darkNavy, accentColor: Colors.yellow, dayOffset: 0,
   },
   {
-    id: '2',
-    title: 'Dinner at Strega',
-    startHour: 18,            // 6 pm
-    startMinute: 0,
-    durationMinutes: 90,      // 1.5 h
-    color: '#2563B0',
-    accentColor: Colors.lightYellow,
+    id: '2', title: 'Dinner at Strega',
+    startHour: 18, startMinute: 0, durationMinutes: 90,
+    color: '#2563B0', accentColor: Colors.lightYellow, dayOffset: 2,
+  },
+  {
+    id: '3', title: 'Duck Tour',
+    startHour: 11, startMinute: 0, durationMinutes: 120,
+    color: '#1a7a4a', accentColor: Colors.lightYellow, dayOffset: 1,
   },
 ];
 
@@ -62,7 +72,7 @@ function ordinalSuffix(n: number): string {
 }
 
 function formatDayLabel(dateString: string): string {
-  const d = new Date(dateString + 'T12:00:00');
+  const d       = new Date(dateString + 'T12:00:00');
   const weekday = d.toLocaleDateString('en-US', { weekday: 'long' });
   const day     = d.getDate();
   const month   = d.toLocaleDateString('en-US', { month: 'long' });
@@ -70,24 +80,38 @@ function formatDayLabel(dateString: string): string {
 }
 
 function formatTimeRange(a: Activity): string {
-  const toAmPm = (h: number, m: number) => {
+  const fmt = (h: number, m: number) => {
     const ampm = h >= 12 ? 'pm' : 'am';
     const h12  = h % 12 === 0 ? 12 : h % 12;
-    const mm   = m.toString().padStart(2, '0');
-    return `${h12}:${mm} ${ampm}`;
+    return `${h12}:${m.toString().padStart(2, '0')} ${ampm}`;
   };
-  const totalMin = a.startHour * 60 + a.startMinute + a.durationMinutes;
-  const endH = Math.floor(totalMin / 60);
-  const endM = totalMin % 60;
-  return `${toAmPm(a.startHour, a.startMinute)} – ${toAmPm(endH, endM)}`;
+  const total = a.startHour * 60 + a.startMinute + a.durationMinutes;
+  return `${fmt(a.startHour, a.startMinute)} – ${fmt(Math.floor(total / 60), total % 60)}`;
 }
 
-// ── Block geometry helpers ────────────────────────────────────
 function blockTop(a: Activity): number {
   return (a.startHour - TIMELINE_START + a.startMinute / 60) * SLOT_H;
 }
+
 function blockHeight(a: Activity): number {
-  return (a.durationMinutes / 60) * SLOT_H;
+  return Math.max((a.durationMinutes / 60) * SLOT_H, 20);
+}
+
+function getWeekDates(dateString: string): Date[] {
+  const d           = new Date(dateString + 'T12:00:00');
+  const daysFromMon = d.getDay() === 0 ? 6 : d.getDay() - 1;
+  const monday      = new Date(d);
+  monday.setDate(d.getDate() - daysFromMon);
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = new Date(monday);
+    day.setDate(monday.getDate() + i);
+    return day;
+  });
+}
+
+function getDayOffset(dateString: string): number {
+  const day = new Date(dateString + 'T12:00:00').getDay();
+  return day === 0 ? 6 : day - 1;
 }
 
 // ── Main Screen ───────────────────────────────────────────────
@@ -96,7 +120,87 @@ export default function CalendarDayPage() {
   const { date } = useLocalSearchParams<{ date: string }>();
   const router   = useRouter();
 
-  const dateLabel = date ? formatDayLabel(date) : 'Selected Day';
+  const [viewMode,   setViewMode]   = useState<'day' | 'week'>('day');
+  const [activities, setActivities] = useState<Activity[]>(INITIAL_ACTIVITIES);
+  const [dragging,   setDragging]   = useState<Activity | null>(null);
+  const [hoverDay,   setHoverDay]   = useState<number | null>(null);
+
+  const dragX       = useSharedValue(0);
+  const dragY       = useSharedValue(0);
+  const dragOpacity = useSharedValue(0);
+
+  const safeDate         = date ?? new Date().toISOString().split('T')[0];
+  const weekDates        = getWeekDates(safeDate);
+  const selectedDayOffset = getDayOffset(safeDate);
+
+  // ── Drag callbacks (JS thread) ───────────────────────────────
+
+  const onDragStart = useCallback((activity: Activity) => {
+    setDragging(activity);
+  }, []);
+
+  const onDragMove = useCallback((absoluteX: number) => {
+    const relX = absoluteX - H_PADDING - LABEL_W;
+    setHoverDay(Math.max(0, Math.min(6, Math.floor(relX / COL_W))));
+  }, []);
+
+  const onDragEnd = useCallback((activityId: string, absoluteX: number) => {
+    const relX      = absoluteX - H_PADDING - LABEL_W;
+    const targetDay = Math.max(0, Math.min(6, Math.floor(relX / COL_W)));
+    setActivities(prev =>
+      prev.map(a => a.id === activityId ? { ...a, dayOffset: targetDay } : a)
+    );
+    setDragging(null);
+    setHoverDay(null);
+  }, []);
+
+  const onDragCancel = useCallback(() => {
+    setDragging(null);
+    setHoverDay(null);
+  }, []);
+
+  // ── Overlay animated style ───────────────────────────────────
+
+  const overlayStyle = useAnimatedStyle(() => ({
+    left:    dragX.value,
+    top:     dragY.value,
+    opacity: dragOpacity.value,
+  }));
+
+  // ── Build gesture for a single activity ──────────────────────
+
+  const makeGesture = (activity: Activity) =>
+    Gesture.Pan()
+      .activateAfterLongPress(400)
+      .onStart((e) => {
+        dragX.value       = e.absoluteX - COL_W / 2;
+        dragY.value       = e.absoluteY - blockHeight(activity) / 2;
+        dragOpacity.value = withTiming(1, { duration: 120 });
+        runOnJS(onDragStart)(activity);
+      })
+      .onChange((e) => {
+        dragX.value = e.absoluteX - COL_W / 2;
+        dragY.value = e.absoluteY - blockHeight(activity) / 2;
+        runOnJS(onDragMove)(e.absoluteX);
+      })
+      .onEnd((e) => {
+        dragOpacity.value = withTiming(0, { duration: 120 });
+        runOnJS(onDragEnd)(activity.id, e.absoluteX);
+      })
+      .onFinalize(() => {
+        dragOpacity.value = withTiming(0, { duration: 120 });
+        runOnJS(onDragCancel)();
+      });
+
+  // ── Group activities by day for week view ────────────────────
+
+  const byDay: Record<number, Activity[]> = {};
+  for (let i = 0; i < 7; i++) byDay[i] = [];
+  for (const a of activities) byDay[a.dayOffset].push(a);
+
+  const dayActivities = activities.filter(a => a.dayOffset === selectedDayOffset);
+
+  // ── Render ───────────────────────────────────────────────────
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -110,23 +214,40 @@ export default function CalendarDayPage() {
         >
           <Ionicons name="arrow-back" size={24} color={Colors.white} />
         </TouchableOpacity>
-
         <View style={styles.logoRow}>
           <Text style={styles.logoText}>On the </Text>
           <Text style={styles.logoAccent}>GO!</Text>
         </View>
-
-        {/* Right spacer to keep logo centered */}
         <View style={styles.backBtn} />
       </View>
 
-      {/* ── Section label + date ── */}
+      {/* ── Section label + Day/Week toggle ── */}
       <View style={styles.labelBlock}>
         <Text style={styles.sectionLabel}>My Calendar</Text>
-        <Text style={styles.dateLabel}>{dateLabel}</Text>
+        <View style={styles.subRow}>
+          <Text style={styles.dateLabel} numberOfLines={1}>
+            {viewMode === 'day' ? formatDayLabel(safeDate) : 'Weekly View'}
+          </Text>
+          <View style={styles.toggle}>
+            <TouchableOpacity
+              style={[styles.toggleBtn, viewMode === 'day' && styles.toggleBtnActive]}
+              onPress={() => setViewMode('day')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.toggleText, viewMode === 'day' && styles.toggleTextActive]}>Day</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.toggleBtn, viewMode === 'week' && styles.toggleBtnActive]}
+              onPress={() => setViewMode('week')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.toggleText, viewMode === 'week' && styles.toggleTextActive]}>Week</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
 
-      {/* ── Day view card ── */}
+      {/* ── Content ── */}
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={styles.scrollContent}
@@ -134,61 +255,163 @@ export default function CalendarDayPage() {
       >
         <View style={styles.card}>
 
-          {/* ── Timeline ── */}
-          <View style={{ height: CONTAINER_H, position: 'relative' }}>
+          {viewMode === 'day' ? (
 
-            {/* Time slot rows */}
-            {TIME_SLOTS.map((label, i) => (
-              <View
-                key={label}
-                style={[styles.slotRow, { top: i * SLOT_H }]}
-                pointerEvents="none"
-              >
-                <Text style={styles.timeLabel}>{label}</Text>
-                <View style={styles.slotLine} />
-              </View>
-            ))}
+            /* ══ Day view ══ */
+            <View style={{ height: CONTAINER_H, position: 'relative' }}>
+              {TIME_SLOTS.map((label, i) => (
+                <View key={label} style={[styles.slotRow, { top: i * SLOT_H }]} pointerEvents="none">
+                  <Text style={styles.timeLabel}>{label}</Text>
+                  <View style={styles.slotLine} />
+                </View>
+              ))}
+              {dayActivities.map(activity => (
+                <View
+                  key={activity.id}
+                  style={[
+                    styles.activityBlock,
+                    {
+                      top:             blockTop(activity),
+                      height:          blockHeight(activity),
+                      backgroundColor: activity.color,
+                      borderLeftColor: activity.accentColor,
+                    },
+                  ]}
+                >
+                  <Text style={styles.activityTitle} numberOfLines={2}>{activity.title}</Text>
+                  <Text style={styles.activityTime}>{formatTimeRange(activity)}</Text>
+                  {blockHeight(activity) >= SLOT_H * 1.5 && (
+                    <View style={styles.durationPill}>
+                      <Ionicons name="time-outline" size={11} color="rgba(255,255,255,0.8)" />
+                      <Text style={styles.durationText}>
+                        {activity.durationMinutes >= 60
+                          ? `${activity.durationMinutes / 60}h`
+                          : `${activity.durationMinutes}m`}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              ))}
+            </View>
 
-            {/* Activity blocks */}
-            {PLACEHOLDER_ACTIVITIES.map(activity => (
-              <View
-                key={activity.id}
-                style={[
-                  styles.activityBlock,
-                  {
-                    top: blockTop(activity),
-                    height: blockHeight(activity),
-                    backgroundColor: activity.color,
-                    borderLeftColor: activity.accentColor,
-                  },
-                ]}
-              >
-                <Text style={styles.activityTitle} numberOfLines={2}>
-                  {activity.title}
-                </Text>
-                <Text style={styles.activityTime}>
-                  {formatTimeRange(activity)}
-                </Text>
-                {blockHeight(activity) >= SLOT_H * 1.5 && (
-                  <View style={styles.durationPill}>
-                    <Ionicons name="time-outline" size={11} color="rgba(255,255,255,0.8)" />
-                    <Text style={styles.durationText}>
-                      {activity.durationMinutes >= 60
-                        ? `${activity.durationMinutes / 60}h`
-                        : `${activity.durationMinutes}m`}
+          ) : (
+
+            /* ══ Week view ══ */
+            <>
+              {/* Day-of-week header */}
+              <View style={styles.weekHeader}>
+                <View style={{ width: LABEL_W }} />
+                {weekDates.map((d, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.weekDayCell,
+                      i === selectedDayOffset && styles.weekDayCellSelected,
+                      hoverDay === i && styles.weekDayCellHover,
+                    ]}
+                  >
+                    <Text style={[styles.weekDayAbbrev, i === selectedDayOffset && styles.weekDayAbbrevSelected]}>
+                      {DAY_ABBREVS[i]}
+                    </Text>
+                    <Text style={[styles.weekDayNum, i === selectedDayOffset && styles.weekDayNumSelected]}>
+                      {d.getDate()}
                     </Text>
                   </View>
-                )}
+                ))}
               </View>
-            ))}
-          </View>
+
+              {/* Timeline + activity columns */}
+              <View style={{ height: CONTAINER_H, position: 'relative' }}>
+
+                {/* Time slot rules */}
+                {TIME_SLOTS.map((label, i) => (
+                  <View key={label} style={[styles.slotRow, { top: i * SLOT_H }]} pointerEvents="none">
+                    <Text style={styles.timeLabel}>{label}</Text>
+                    <View style={styles.slotLine} />
+                  </View>
+                ))}
+
+                {/* Column separators */}
+                {Array.from({ length: 6 }, (_, i) => (
+                  <View
+                    key={i}
+                    pointerEvents="none"
+                    style={[styles.colSep, { left: LABEL_W + (i + 1) * COL_W }]}
+                  />
+                ))}
+
+                {/* Hover highlight */}
+                {hoverDay !== null && (
+                  <View
+                    pointerEvents="none"
+                    style={[styles.hoverHighlight, { left: LABEL_W + hoverDay * COL_W, width: COL_W }]}
+                  />
+                )}
+
+                {/* Activity blocks per day column */}
+                {Array.from({ length: 7 }, (_, dayIdx) => (
+                  <View
+                    key={dayIdx}
+                    pointerEvents="box-none"
+                    style={{
+                      position: 'absolute',
+                      left:     LABEL_W + dayIdx * COL_W + 1,
+                      width:    COL_W - 2,
+                      top:      0,
+                      height:   CONTAINER_H,
+                    }}
+                  >
+                    {byDay[dayIdx].map(activity => {
+                      const isDragging = dragging?.id === activity.id;
+                      return (
+                        <GestureDetector key={activity.id} gesture={makeGesture(activity)}>
+                          <View
+                            style={{
+                              position:        'absolute',
+                              top:             blockTop(activity),
+                              left:            0,
+                              right:           0,
+                              height:          blockHeight(activity),
+                              backgroundColor: activity.color,
+                              borderLeftWidth: 3,
+                              borderLeftColor: activity.accentColor,
+                              borderRadius:    Radius.sm,
+                              opacity:         isDragging ? 0.25 : 1,
+                            }}
+                          />
+                        </GestureDetector>
+                      );
+                    })}
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
         </View>
+
+        {viewMode === 'week' && (
+          <Text style={styles.dragHint}>Long-press an activity and drag to a new day</Text>
+        )}
       </ScrollView>
+
+      {/* ── Drag overlay (floats above everything) ── */}
+      <ReanimatedLib.View
+        pointerEvents="none"
+        style={[styles.dragOverlay, overlayStyle, { width: COL_W, height: dragging ? blockHeight(dragging) : 20 }]}
+      >
+        {dragging && (
+          <View style={[styles.dragOverlayInner, { backgroundColor: dragging.color, borderLeftColor: dragging.accentColor }]}>
+            <Text style={styles.dragOverlayText} numberOfLines={2}>{dragging.title}</Text>
+          </View>
+        )}
+      </ReanimatedLib.View>
 
       <BottomNavigationBar />
     </SafeAreaView>
   );
 }
+
+// ── Styles ────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   container: {
@@ -198,121 +421,238 @@ const styles = StyleSheet.create({
 
   // ── Header ──
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection:   'row',
+    alignItems:      'center',
+    justifyContent:  'space-between',
     paddingHorizontal: H_PADDING,
-    paddingTop: width * 0.02,
-    paddingBottom: width * 0.01,
+    paddingTop:      width * 0.02,
+    paddingBottom:   width * 0.01,
   },
-  backBtn: { width: 36, alignItems: 'flex-start' },
-  logoRow: { flexDirection: 'row', alignItems: 'baseline' },
+  backBtn:  { width: 36, alignItems: 'flex-start' },
+  logoRow:  { flexDirection: 'row', alignItems: 'baseline' },
   logoText: {
     fontFamily: FontFamily.acme,
-    fontSize: width * 0.085,
-    color: Colors.white,
+    fontSize:   width * 0.085,
+    color:      Colors.white,
   },
   logoAccent: {
     fontFamily: FontFamily.acme,
-    fontSize: width * 0.085,
-    color: Colors.yellow,
+    fontSize:   width * 0.085,
+    color:      Colors.yellow,
   },
 
-  // ── Labels ──
+  // ── Labels + toggle ──
   labelBlock: {
     paddingHorizontal: H_PADDING,
-    paddingBottom: width * 0.04,
+    paddingBottom:     width * 0.04,
   },
   sectionLabel: {
-    fontFamily: FontFamily.merriweatherBold,
-    fontSize: width * 0.07,
-    color: Colors.white,
-    marginBottom: 2,
+    fontFamily:   FontFamily.merriweatherBold,
+    fontSize:     width * 0.07,
+    color:        Colors.white,
+    marginBottom: 6,
+  },
+  subRow: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    justifyContent: 'space-between',
+    gap:            8,
   },
   dateLabel: {
     fontFamily: FontFamily.merriweather,
-    fontSize: width * 0.038,
-    color: 'rgba(255,255,255,0.85)',
+    fontSize:   width * 0.034,
+    color:      'rgba(255,255,255,0.85)',
+    flex:       1,
+  },
+  toggle: {
+    flexDirection:   'row',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius:    Radius.full,
+    padding:         3,
+  },
+  toggleBtn: {
+    paddingHorizontal: 14,
+    paddingVertical:   5,
+    borderRadius:      Radius.full,
+  },
+  toggleBtnActive: {
+    backgroundColor: Colors.white,
+  },
+  toggleText: {
+    fontFamily: FontFamily.merriweatherBold,
+    fontSize:   width * 0.031,
+    color:      'rgba(255,255,255,0.8)',
+  },
+  toggleTextActive: {
+    color: Colors.darkNavy,
   },
 
   // ── Scroll ──
   scrollContent: {
     paddingHorizontal: H_PADDING,
-    paddingBottom: width * 0.06,
+    paddingBottom:     width * 0.06,
   },
 
   // ── Card ──
   card: {
     backgroundColor: Colors.white,
-    borderRadius: Radius.xl,
-    paddingTop: 12,
-    paddingBottom: 12,
-    paddingLeft: 12,
-    paddingRight: 12,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
+    borderRadius:    Radius.xl,
+    paddingTop:      12,
+    paddingBottom:   12,
+    paddingLeft:     12,
+    paddingRight:    12,
+    shadowColor:     Colors.black,
+    shadowOffset:    { width: 0, height: 6 },
+    shadowOpacity:   0.1,
+    shadowRadius:    12,
+    overflow:        'hidden',
   },
 
-  // ── Time slot rows ──
+  // ── Time slot rows (shared day + week) ──
   slotRow: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: SLOT_H,
+    position:    'absolute',
+    left:        0,
+    right:       0,
+    height:      SLOT_H,
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems:  'flex-start',
   },
   timeLabel: {
-    width: LABEL_W,
+    width:      LABEL_W,
     fontFamily: FontFamily.merriweather,
-    fontSize: width * 0.03,
-    color: Colors.lightGray,
+    fontSize:   width * 0.026,
+    color:      Colors.lightGray,
     paddingTop: 4,
-    textAlign: 'right',
-    paddingRight: 10,
+    textAlign:  'right',
+    paddingRight: 6,
   },
   slotLine: {
-    flex: 1,
-    height: 1,
+    flex:            1,
+    height:          1,
     backgroundColor: '#e6eaf2',
-    marginTop: 9,   // aligns with top of label text
+    marginTop:       9,
   },
 
-  // ── Activity blocks ──
+  // ── Day view: activity blocks ──
   activityBlock: {
-    position: 'absolute',
-    left: LABEL_W + 6,
-    right: 0,
-    borderRadius: Radius.md,
-    borderLeftWidth: 4,
+    position:         'absolute',
+    left:             LABEL_W + 6,
+    right:            0,
+    borderRadius:     Radius.md,
+    borderLeftWidth:  4,
     paddingHorizontal: 10,
-    paddingVertical: 8,
-    overflow: 'hidden',
+    paddingVertical:  8,
+    overflow:         'hidden',
   },
   activityTitle: {
-    fontFamily: FontFamily.merriweatherBold,
-    fontSize: width * 0.034,
-    color: Colors.white,
+    fontFamily:   FontFamily.merriweatherBold,
+    fontSize:     width * 0.034,
+    color:        Colors.white,
     marginBottom: 3,
   },
   activityTime: {
     fontFamily: FontFamily.merriweather,
-    fontSize: width * 0.028,
-    color: 'rgba(255,255,255,0.8)',
+    fontSize:   width * 0.028,
+    color:      'rgba(255,255,255,0.8)',
   },
   durationPill: {
-    position: 'absolute',
-    bottom: 8,
-    right: 10,
+    position:    'absolute',
+    bottom:      8,
+    right:       10,
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
+    alignItems:  'center',
+    gap:         3,
   },
   durationText: {
     fontFamily: FontFamily.merriweather,
-    fontSize: width * 0.026,
-    color: 'rgba(255,255,255,0.75)',
+    fontSize:   width * 0.026,
+    color:      'rgba(255,255,255,0.75)',
+  },
+
+  // ── Week view header ──
+  weekHeader: {
+    flexDirection:    'row',
+    paddingBottom:    8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e6eaf2',
+    marginBottom:     4,
+  },
+  weekDayCell: {
+    flex:       1,
+    alignItems: 'center',
+    paddingVertical: 4,
+    borderRadius: Radius.sm,
+  },
+  weekDayCellSelected: {
+    backgroundColor: '#dbeafe',
+  },
+  weekDayCellHover: {
+    backgroundColor: '#fef3b3',
+  },
+  weekDayAbbrev: {
+    fontFamily: FontFamily.merriweatherBold,
+    fontSize:   width * 0.028,
+    color:      Colors.lightGray,
+  },
+  weekDayAbbrevSelected: {
+    color: Colors.darkNavy,
+  },
+  weekDayNum: {
+    fontFamily: FontFamily.merriweather,
+    fontSize:   width * 0.03,
+    color:      Colors.lightGray,
+    marginTop:  1,
+  },
+  weekDayNumSelected: {
+    color:      Colors.darkNavy,
+    fontFamily: FontFamily.merriweatherBold,
+  },
+
+  // ── Week view column lines & highlight ──
+  colSep: {
+    position:        'absolute',
+    top:             0,
+    bottom:          0,
+    width:           1,
+    backgroundColor: '#e6eaf2',
+  },
+  hoverHighlight: {
+    position:        'absolute',
+    top:             0,
+    height:          CONTAINER_H,
+    backgroundColor: 'rgba(254,189,25,0.15)',
+  },
+
+  // ── Drag hint ──
+  dragHint: {
+    fontFamily: FontFamily.merriweatherItalic,
+    fontSize:   width * 0.03,
+    color:      'rgba(255,255,255,0.6)',
+    textAlign:  'center',
+    marginTop:  10,
+  },
+
+  // ── Drag overlay ──
+  dragOverlay: {
+    position: 'absolute',
+    zIndex:   999,
+  },
+  dragOverlayInner: {
+    flex:            1,
+    borderLeftWidth: 3,
+    borderRadius:    Radius.sm,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+    overflow:        'hidden',
+    shadowColor:     Colors.black,
+    shadowOffset:    { width: 0, height: 4 },
+    shadowOpacity:   0.3,
+    shadowRadius:    8,
+    elevation:       8,
+  },
+  dragOverlayText: {
+    fontFamily: FontFamily.merriweatherBold,
+    fontSize:   width * 0.026,
+    color:      Colors.white,
   },
 });
