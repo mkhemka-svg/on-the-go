@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   StyleSheet,
   Dimensions,
   Alert,
+  ActivityIndicator,
+  FlatList,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,6 +20,29 @@ import TripCreationStepper from '@/components/TripCreationStepper';
 import { commitDraftAsTrip } from '@/constants/tripStore';
 
 const { width, height } = Dimensions.get('window');
+
+const PLACES_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY ?? '';
+
+interface PlaceSuggestion {
+  place_id: string;
+  description: string;
+}
+
+async function fetchSuggestions(input: string): Promise<PlaceSuggestion[]> {
+  if (!PLACES_KEY || !input.trim()) return [];
+  try {
+    const url =
+      `https://maps.googleapis.com/maps/api/place/autocomplete/json` +
+      `?input=${encodeURIComponent(input)}` +
+      `&types=(cities)` +
+      `&key=${PLACES_KEY}`;
+    const res  = await fetch(url);
+    const json = await res.json() as { predictions?: PlaceSuggestion[] };
+    return json.predictions ?? [];
+  } catch {
+    return [];
+  }
+}
 
 const CARD_GAP    = 12;
 const H_PADDING   = width * 0.06;
@@ -147,6 +172,32 @@ export default function ChooseDestinationPage() {
   const [selectedId,  setSelectedId]            = useState<string | null>(null);
   const [selectedName, setSelectedName]         = useState('');
   const [destinationError, setDestinationError] = useState('');
+  const [suggestions, setSuggestions]           = useState<PlaceSuggestion[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleCustomInputChange = useCallback((text: string) => {
+    setCustomInput(text);
+    setDestinationError('');
+    setSuggestions([]);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!text.trim()) { setLoadingSuggestions(false); return; }
+    if (!PLACES_KEY) return;
+    setLoadingSuggestions(true);
+    debounceRef.current = setTimeout(async () => {
+      const results = await fetchSuggestions(text);
+      setSuggestions(results);
+      setLoadingSuggestions(false);
+    }, 350);
+  }, []);
+
+  const handleSelectSuggestion = (suggestion: PlaceSuggestion) => {
+    setSelectedId('places-' + suggestion.place_id);
+    setSelectedName(suggestion.description);
+    setCustomInput('');
+    setSuggestions([]);
+    setDestinationError('');
+  };
 
   const handleSelectTrending = (dest: Destination) => {
     setSelectedId(dest.id);
@@ -160,6 +211,8 @@ export default function ChooseDestinationPage() {
     if (!name) return;
     setSelectedId('custom');
     setSelectedName(name);
+    setCustomInput('');
+    setSuggestions([]);
     setDestinationError('');
   };
 
@@ -230,21 +283,51 @@ export default function ChooseDestinationPage() {
         <View style={styles.inputRow}>
           <TextInput
             style={styles.input}
-            placeholder="Add custom destination"
+            placeholder={PLACES_KEY ? 'Search any destination…' : 'Add custom destination'}
             placeholderTextColor={Colors.lightGray}
             value={customInput}
-            onChangeText={text => { setCustomInput(text); setDestinationError(''); }}
+            onChangeText={handleCustomInputChange}
             returnKeyType="done"
             onSubmitEditing={handleAddCustom}
           />
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={handleAddCustom}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="add" size={26} color={Colors.white} />
-          </TouchableOpacity>
+          {loadingSuggestions
+            ? <ActivityIndicator color={Colors.white} style={{ width: 50 }} />
+            : (
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={handleAddCustom}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="add" size={26} color={Colors.white} />
+              </TouchableOpacity>
+            )
+          }
         </View>
+
+        {/* Places autocomplete suggestions */}
+        {suggestions.length > 0 && (
+          <View style={styles.suggestionsBox}>
+            <FlatList
+              data={suggestions}
+              keyExtractor={item => item.place_id}
+              scrollEnabled={false}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item, index }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.suggestionRow,
+                    index < suggestions.length - 1 && styles.suggestionBorder,
+                  ]}
+                  onPress={() => handleSelectSuggestion(item)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="location-outline" size={15} color={Colors.lightGray} style={{ marginRight: 8 }} />
+                  <Text style={styles.suggestionText} numberOfLines={1}>{item.description}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        )}
 
         {/* Error */}
         {!!destinationError && (
@@ -386,6 +469,33 @@ const styles = StyleSheet.create({
     fontSize: width * 0.033,
     color: '#ffcccc',
     marginBottom: 8,
+  },
+  suggestionsBox: {
+    backgroundColor: Colors.white,
+    borderRadius: Radius.md,
+    marginTop: 4,
+    marginBottom: 6,
+    overflow: 'hidden',
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+  },
+  suggestionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: height * 0.016,
+  },
+  suggestionBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#e0e8f5',
+  },
+  suggestionText: {
+    flex: 1,
+    fontFamily: FontFamily.merriweather,
+    fontSize: width * 0.036,
+    color: Colors.darkNavy,
   },
 
   // ── Section label ──
