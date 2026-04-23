@@ -29,6 +29,7 @@ const { width, height } = Dimensions.get('window');
 export default function SignInOrSignUpPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [emailLoading, setEmailLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleAvailable, setAppleAvailable] = useState(false);
@@ -42,6 +43,13 @@ export default function SignInOrSignUpPage() {
   const handleEmailContinue = async () => {
     const trimmed = email.trim().toLowerCase();
     if (!trimmed) return;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmed)) {
+      setEmailError('Please enter a valid email address.');
+      return;
+    }
+    setEmailError('');
 
     // Dev bypass: skip auth when Supabase is not yet configured
     const supabaseConfigured =
@@ -151,7 +159,7 @@ export default function SignInOrSignUpPage() {
     }
   };
 
-  const emailIsValid = email.trim().length > 0;
+  const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim().toLowerCase());
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -187,6 +195,10 @@ export default function SignInOrSignUpPage() {
               onSubmitEditing={handleEmailContinue}
             />
           </View>
+
+          {emailError ? (
+            <Text style={styles.emailErrorText}>{emailError}</Text>
+          ) : null}
 
           {/* ── Continue button ── */}
           <TouchableOpacity
@@ -416,5 +428,13 @@ const styles = StyleSheet.create({
   termsLink: {
     textDecorationLine: 'underline',
     opacity: 1,
+  },
+  emailErrorText: {
+    color: Colors.yellow,
+    fontFamily: FontFamily.merriweather,
+    fontSize: 12,
+    marginTop: -8,
+    marginBottom: 4,
+    alignSelf: 'flex-start',
   },
 });
